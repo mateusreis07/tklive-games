@@ -201,6 +201,9 @@
   <div id="notifs"></div>
 </div>
 
+<!-- Sys message -->
+<div id="sys-message" style="position:fixed; top:80px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.9); border: 2px solid #ff0050; padding:14px 28px; border-radius:12px; font-family:'Black Ops One', sans-serif; font-size:20px; color:#fff; display:none; z-index:9999; text-align:center; box-shadow: 0 0 30px rgba(255,0,80,0.6); text-transform: uppercase; white-space: nowrap;"></div>
+
 <!-- Bottom chat bar -->
 <div id="bottom">
   <div id="bottom-label">💬 CHAT</div>
@@ -886,6 +889,23 @@ function connectWS() {
   ws.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data);
+
+      if (data.type === 'sys') {
+        const sysMsg = document.getElementById('sys-message');
+        sysMsg.textContent = data.text;
+        sysMsg.style.display = 'block';
+        if (data.event === 'error' || data.event === 'disconnected') {
+          sysMsg.style.borderColor = '#ff0050';
+          sysMsg.style.color = '#ff0050';
+          sysMsg.style.boxShadow = '0 0 30px rgba(255,0,80,0.6)';
+        } else {
+          sysMsg.style.borderColor = '#00ff88';
+          sysMsg.style.color = '#00ff88';
+          sysMsg.style.boxShadow = '0 0 30px rgba(0,255,136,0.6)';
+          setTimeout(() => sysMsg.style.display = 'none', 5000);
+        }
+        return;
+      }
 
       if (data.type === 'gift') {
         const total = (data.coins || 1) * (data.repeatCount || 1);

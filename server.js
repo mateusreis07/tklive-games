@@ -90,9 +90,11 @@ function startTikTokConnection(user) {
   tiktok.connect()
     .then(state => {
       console.log(`[TIKTOK] ✅ Live @${user} conectada! Room ID: ${state.roomId}`);
+      broadcast(user, { type: 'sys', event: 'connected', text: `Live conectada com sucesso!` });
     })
     .catch(err => {
       console.error(`[TIKTOK] ❌ Falha ao conectar @${user}:`, err.message);
+      broadcast(user, { type: 'sys', event: 'error', text: `A live @${user} não está online. Inicie a live!` });
       activeTiktokConnections.delete(user);
     });
 
@@ -139,6 +141,7 @@ function startTikTokConnection(user) {
 
   tiktok.on('disconnected', () => {
     console.warn(`[TIKTOK] ⚠️  @${user} desconectou da live.`);
+    broadcast(user, { type: 'sys', event: 'disconnected', text: `Live desconectada.` });
     activeTiktokConnections.delete(user);
   });
   
