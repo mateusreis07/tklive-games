@@ -314,14 +314,15 @@
       </div>
     </div>
 
-    <!-- JOGO 2 -->
+    <!-- JOGO 2 — Duelo -->
     <div class="game-card">
-      <div class="badge badge-soon">Em Breve</div>
-      <div class="game-banner banner-corrida">🏎️</div>
+      <div class="badge badge-active">Disponível</div>
+      <div class="game-banner" style="background:linear-gradient(45deg,#1a0b2e,#6600cc,#ff0050);font-size:44px;">⚔️🆚⚔️</div>
       <div class="game-info">
-        <div class="game-title">Corrida do Pix</div>
-        <div class="game-desc">Os espectadores impulsionam seus carros na pista mandando presentes. Quem chegar primeiro ganha!</div>
-        <button class="btn" disabled>Em breve</button>
+        <div class="game-title">Duelo Épico</div>
+        <div class="game-desc">Dois times se enfrentam! Presentes e comentários causam dano ao adversário. A barra de vida zera, o vencedor ganha +1 ponto e começa um novo round!</div>
+        <button class="btn btn-primary" onclick="openDueloConfig()">Configurar Live</button>
+        <button class="btn btn-outline" onclick="window.location.href='duelo.html?user=demo&game=duelo'">Ver Demonstração</button>
       </div>
     </div>
 
@@ -464,6 +465,52 @@
   </div>
 </div>
 
+<!-- ─── MODAL DUELO ────────────────────────────────────── -->
+<div class="modal-overlay" id="duelo-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAll()">×</button>
+    <h2>⚔️ Configurar Duelo Épico</h2>
+
+    <div class="input-group">
+      <label>Seu @ do TikTok</label>
+      <input type="text" id="duelo-user" placeholder="ex: neymarjr" autocomplete="off">
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:24px;">
+      <div class="input-group" style="flex:1;margin:0;">
+        <label style="margin-bottom:6px;">Time A</label>
+        <input type="text" id="duelo-ea" placeholder="🔵" style="font-size:28px;text-align:center;margin-bottom:8px;" value="🔵">
+        <input type="text" id="duelo-na" placeholder="Nome do Time A" style="font-size:15px;">
+      </div>
+      <div style="display:flex;align-items:center;padding-top:28px;font-family:'Black Ops One',sans-serif;color:#ff0050;font-size:22px;">VS</div>
+      <div class="input-group" style="flex:1;margin:0;">
+        <label style="margin-bottom:6px;">Time B</label>
+        <input type="text" id="duelo-eb" placeholder="🔴" style="font-size:28px;text-align:center;margin-bottom:8px;" value="🔴">
+        <input type="text" id="duelo-nb" placeholder="Nome do Time B" style="font-size:15px;">
+      </div>
+    </div>
+
+    <button class="generate-btn" onclick="generateDueloLink()">Gerar Link para o OBS</button>
+
+    <div class="result-box" id="duelo-result-box">
+      <h3>✅ Link exclusivo da sua live:</h3>
+      <div class="link-box" id="duelo-generated-link"></div>
+      <button class="copy-btn" onclick="copyDueloLink()">Copiar Link</button>
+      <button class="copy-btn" style="background:#333;color:#fff;margin-left:8px;" onclick="testDuelo()">Abrir no Navegador</button>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
+        <h4 style="color:#ff0050;margin-bottom:12px;font-size:14px;text-transform:uppercase;">⚠️ Como funciona</h4>
+        <ol style="color:#bbb;font-size:13px;line-height:1.6;padding-left:20px;margin:0;">
+          <li style="margin-bottom:8px;"><strong>Inicie sua live</strong> no TikTok primeiro.</li>
+          <li style="margin-bottom:8px;">Cole o link no OBS (fonte Navegador, 1080×1920).</li>
+          <li style="margin-bottom:8px;">Peça para a audiência comentar <strong>1</strong> para apoiar o Time A ou <strong>2</strong> para o Time B.</li>
+          <li>Presentes e comentários atacam o time adversário. Quem zerar a vida vence o round e ganha +1 ponto!</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   let selectedGame = '';
 
@@ -473,6 +520,13 @@
     document.getElementById('config-modal').classList.add('open');
     document.getElementById('result-box').style.display = 'none';
     document.getElementById('tiktok-user').value = '';
+  }
+
+  function openDueloConfig() {
+    closeAll();
+    document.getElementById('duelo-modal').classList.add('open');
+    document.getElementById('duelo-result-box').style.display = 'none';
+    document.getElementById('duelo-user').value = '';
   }
 
   function openInfoModal() {
@@ -508,6 +562,30 @@
 
   function testGame() {
     window.location.href = document.getElementById('generated-link').textContent;
+  }
+
+  function generateDueloLink() {
+    let user = document.getElementById('duelo-user').value.trim();
+    if (!user) { alert('Digite seu @ do TikTok!'); return; }
+    if (user.startsWith('@')) user = user.substring(1);
+
+    const ea = encodeURIComponent(document.getElementById('duelo-ea').value.trim() || '🔵');
+    const na = encodeURIComponent(document.getElementById('duelo-na').value.trim() || 'Time A');
+    const eb = encodeURIComponent(document.getElementById('duelo-eb').value.trim() || '🔴');
+    const nb = encodeURIComponent(document.getElementById('duelo-nb').value.trim() || 'Time B');
+
+    const finalUrl = `${window.location.origin}/duelo.html?user=${encodeURIComponent(user)}&game=duelo&ea=${ea}&a=${na}&eb=${eb}&b=${nb}`;
+    document.getElementById('duelo-generated-link').textContent = finalUrl;
+    document.getElementById('duelo-result-box').style.display = 'block';
+  }
+
+  function copyDueloLink() {
+    const link = document.getElementById('duelo-generated-link').textContent;
+    navigator.clipboard.writeText(link).then(() => alert('Link copiado! Cole no OBS Studio.'));
+  }
+
+  function testDuelo() {
+    window.location.href = document.getElementById('duelo-generated-link').textContent;
   }
 </script>
 

@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>⚔️ Duelo — TKLive Games</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #060610;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── PLACAR TOPO ─────────────────────────── */
+  #scoreboard {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    background: rgba(0,0,0,0.85);
+    border-bottom: 2px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+  }
+  .score-side {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 200px;
+  }
+  .score-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid;
+    font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+  }
+  #score-a-avatar { border-color: #00f5ff; }
+  #score-b-avatar { border-color: #ff0050; }
+
+  .score-name {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 18px;
+    text-transform: uppercase;
+  }
+  #score-a-name { color: #00f5ff; }
+  #score-b-name { color: #ff0050; text-align: right; }
+
+  .score-pts {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 36px;
+    line-height: 1;
+  }
+  #score-a-pts { color: #00f5ff; }
+  #score-b-pts { color: #ff0050; text-align: right; }
+  .score-b { flex-direction: row-reverse; }
+
+  #score-center {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 13px;
+    color: #555;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  #round-label { color: #aaa; font-size: 15px; display: block; }
+
+  /* ── ARENA CENTRAL ───────────────────────── */
+  #arena {
+    position: fixed;
+    top: 70px; bottom: 120px;
+    left: 0; right: 0;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.5s;
+  }
+
+  #side-a { background: linear-gradient(135deg, rgba(0,245,255,0.06) 0%, transparent 60%); border-right: 1px solid rgba(255,255,255,0.05); }
+  #side-b { background: linear-gradient(225deg, rgba(255,0,80,0.06) 0%, transparent 60%); }
+
+  .side-label {
+    position: absolute;
+    top: 20px;
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    opacity: 0.4;
+    text-transform: uppercase;
+  }
+  #side-a .side-label { color: #00f5ff; left: 24px; }
+  #side-b .side-label { color: #ff0050; right: 24px; }
+
+  /* Fighter */
+  .fighter-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 2;
+  }
+  .fighter-emoji {
+    font-size: 90px;
+    line-height: 1;
+    filter: drop-shadow(0 0 20px currentColor);
+    transition: transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    border: 3px solid;
+    position: relative;
+  }
+  #fighter-a-img { border-color: rgba(0,245,255,0.5); }
+  #fighter-b-img { border-color: rgba(255,0,80,0.5); }
+
+  .fighter-name {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  #fighter-a-name { color: #00f5ff; }
+  #fighter-b-name { color: #ff0050; }
+
+  /* Supporters */
+  .supporters {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 90%;
+    justify-content: center;
+  }
+  .supporter-chip {
+    background: rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #bbb;
+    font-weight: 700;
+    animation: popIn 0.3s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* Particles canvas */
+  #particles-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ── BARRA DE VIDA CENTRAL ───────────────── */
+  #hp-section {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .hp-bar-container {
+    width: 420px;
+    height: 36px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.12);
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+  #hp-a-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00b8cc, #00f5ff);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 18px 0 0 18px;
+  }
+  #hp-b-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff0050, #ff0099);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0 18px 18px 0;
+  }
+  .hp-pct {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 16px;
+    text-align: center;
+    opacity: 0.85;
+  }
+  #hp-a-pct { color: #00f5ff; }
+  #hp-b-pct { color: #ff0050; }
+  .hp-vs {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 22px;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(255,255,255,0.5);
+  }
+  .hp-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 420px;
+    justify-content: space-between;
+  }
+
+  /* ── DIVISOR CENTRAL ─────────────────────── */
+  #divider {
+    position: fixed;
+    left: 50%;
+    top: 70px;
+    bottom: 120px;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.15), transparent);
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+  #divider-sword {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%);
+    font-size: 40px;
+    filter: drop-shadow(0 0 12px rgba(255,255,255,0.6));
+    animation: swordPulse 2s ease-in-out infinite;
+  }
+  @keyframes swordPulse {
+    0%, 100% { transform: translate(-50%, -60%) scale(1);   opacity: 0.8; }
+    50%       { transform: translate(-50%, -60%) scale(1.15); opacity: 1; }
+  }
+
+  /* ── FEED DE ATAQUES ─────────────────────── */
+  #attack-feed {
+    position: fixed;
+    bottom: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    width: 500px;
+    max-height: 180px;
+    overflow: hidden;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .attack-msg {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0,0,0,0.8);
+    border-radius: 20px;
+    padding: 6px 16px;
+    animation: feedIn 0.3s ease, feedOut 0.4s ease 3.6s forwards;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .attack-msg.atk-a { border: 1px solid rgba(0,245,255,0.4); }
+  .attack-msg.atk-b { border: 1px solid rgba(255,0,80,0.4);  }
+  @keyframes feedIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes feedOut { to   { opacity:0; } }
+
+  /* ── RODAPÉ / CHAT ───────────────────────── */
+  #bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 120px;
+    background: rgba(0,0,0,0.85);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 24px;
+    gap: 8px;
+    z-index: 50;
+  }
+  .chat-instruction {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 13px;
+    color: #555;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+  .chat-instruction span.a { color: #00f5ff; }
+  .chat-instruction span.b { color: #ff0050; }
+  #chat-row {
+    display: flex;
+    gap: 16px;
+    overflow: hidden;
+    white-space: nowrap;
+    animation: scrollChat 25s linear infinite;
+  }
+  .chat-item { font-size: 14px; color: #bbb; }
+  .chat-item strong { color: #fff; }
+  .chat-item.ca strong { color: #00f5ff; }
+  .chat-item.cb strong { color: #ff0050; }
+  @keyframes scrollChat {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ── OVERLAY DE VITÓRIA ──────────────────── */
+  #win-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    gap: 20px;
+  }
+  #win-overlay.show { display: flex; }
+  #win-emoji { font-size: 100px; animation: winPop 0.5s ease; }
+  #win-title {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 60px;
+    animation: winPop 0.5s ease 0.1s both;
+    text-shadow: 0 0 40px currentColor;
+  }
+  #win-sub {
+    font-size: 24px;
+    color: #aaa;
+    animation: winPop 0.5s ease 0.2s both;
+  }
+  #win-next {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 18px;
+    color: #555;
+    letter-spacing: 3px;
+    animation: winPop 0.5s ease 0.3s both;
+  }
+  @keyframes winPop {
+    from { transform: scale(0.4); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  /* ── SISTEMA MESSAGE ─────────────────────── */
+  #sys-message {
+    position: fixed;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    border: 2px solid #ff0050;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 18px;
+    color: #ff0050;
+    display: none;
+    z-index: 9999;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(255,0,80,0.5);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ── NOTIF DANO ──────────────────────────── */
+  .dmg-pop {
+    position: fixed;
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 28px;
+    pointer-events: none;
+    z-index: 100;
+    animation: dmgFloat 1.4s ease forwards;
+  }
+  @keyframes dmgFloat {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.4); }
+  }
+
+  /* Stars background */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="particles-canvas"></canvas>
+
+<!-- SISTEMA -->
+<div id="sys-message"></div>
+
+<!-- PLACAR TOPO -->
+<div id="scoreboard">
+  <div class="score-side">
+    <div class="score-avatar" id="score-a-avatar">🔵</div>
+    <div>
+      <div class="score-name" id="score-a-name">TIME A</div>
+      <div style="font-size:12px;color:#555;">comentem 1️⃣</div>
+    </div>
+    <div class="score-pts" id="score-a-pts">0</div>
+  </div>
+
+  <div id="score-center">
+    <span id="round-label">ROUND 1</span>
+    ⚔️ DUELO
+  </div>
+
+  <div class="score-side score-b">
+    <div class="score-avatar" id="score-b-avatar">🔴</div>
+    <div style="text-align:right;">
+      <div class="score-name" id="score-b-name">TIME B</div>
+      <div style="font-size:12px;color:#555;text-align:right;">comentem 2️⃣</div>
+    </div>
+    <div class="score-pts" id="score-b-pts">0</div>
+  </div>
+</div>
+
+<!-- ARENA -->
+<div id="arena">
+  <div class="side" id="side-a">
+    <div class="side-label">Time A — Comente 1</div>
+    <div class="fighter-wrap">
+      <div class="fighter-emoji" id="fighter-a-img">🔵</div>
+      <div class="fighter-name" id="fighter-a-name">TIME A</div>
+    </div>
+    <div class="supporters" id="supporters-a"></div>
+  </div>
+
+  <div class="side" id="side-b">
+    <div class="side-label">Time B — Comente 2</div>
+    <div class="fighter-wrap">
+      <div class="fighter-emoji" id="fighter-b-img">🔴</div>
+      <div class="fighter-name" id="fighter-b-name">TIME B</div>
+    </div>
+    <div class="supporters" id="supporters-b"></div>
+  </div>
+</div>
+
+<!-- DIVISOR -->
+<div id="divider">
+  <div id="divider-sword">⚔️</div>
+</div>
+
+<!-- HP CENTRAL -->
+<div id="hp-section">
+  <div class="hp-row">
+    <span class="hp-pct" id="hp-a-pct">100%</span>
+    <span class="hp-vs">VS</span>
+    <span class="hp-pct" id="hp-b-pct">100%</span>
+  </div>
+  <div class="hp-bar-container">
+    <div id="hp-a-fill" style="width:50%"></div>
+    <div id="hp-b-fill" style="width:50%"></div>
+  </div>
+  <div style="font-size:12px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Presentes causam dano ao adversário</div>
+</div>
+
+<!-- FEED DE ATAQUES -->
+<div id="attack-feed"></div>
+
+<!-- OVERLAY DE VITÓRIA -->
+<div id="win-overlay">
+  <div id="win-emoji">🏆</div>
+  <div id="win-title">VITÓRIA!</div>
+  <div id="win-sub">@fulano venceu o Round!</div>
+  <div id="win-next">Próximo round em...</div>
+</div>
+
+<!-- RODAPÉ -->
+<div id="bottom-bar">
+  <div class="chat-instruction">
+    Escolha seu time: comente <span class="a">1️⃣ ou "time1"</span> para apoiar o Time A &nbsp;|&nbsp; <span class="b">2️⃣ ou "time2"</span> para apoiar o Time B. Presentes atacam o adversário!
+  </div>
+  <div id="chat-row"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DUELO — Motor do Jogo
+// ═══════════════════════════════════════════════════════
+
+const params = new URLSearchParams(window.location.search);
+const USER  = params.get('user') || 'demo';
+const GAME  = params.get('game') || 'duelo';
+const NAME_A = decodeURIComponent(params.get('a') || 'Time A');
+const NAME_B = decodeURIComponent(params.get('b') || 'Time B');
+const EMOJI_A = decodeURIComponent(params.get('ea') || '🔵');
+const EMOJI_B = decodeURIComponent(params.get('eb') || '🔴');
+
+// Injeta nomes e emojis
+document.getElementById('fighter-a-name').textContent = NAME_A.toUpperCase();
+document.getElementById('fighter-b-name').textContent = NAME_B.toUpperCase();
+document.getElementById('fighter-a-img').textContent  = EMOJI_A;
+document.getElementById('fighter-b-img').textContent  = EMOJI_B;
+document.getElementById('score-a-name').textContent   = NAME_A.toUpperCase();
+document.getElementById('score-b-name').textContent   = NAME_B.toUpperCase();
+document.getElementById('score-a-avatar').textContent = EMOJI_A;
+document.getElementById('score-b-avatar').textContent = EMOJI_B;
+
+// ── ESTADO ──────────────────────────────────────────────
+const MAX_HP = 1000;
+const state = {
+  hpA: MAX_HP,
+  hpB: MAX_HP,
+  scoreA: 0,
+  scoreB: 0,
+  round: 1,
+  userSide: {},    // username -> 'a' | 'b'
+  inRound: true,
+  supporters: { a: [], b: [] },
+};
+
+// ── STARFIELD BACKGROUND ─────────────────────────────────
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+bgCanvas.width  = window.innerWidth;
+bgCanvas.height = window.innerHeight;
+const stars = Array.from({length:180}, () => ({
+  x: Math.random() * bgCanvas.width,
+  y: Math.random() * bgCanvas.height,
+  r: Math.random() * 1.2 + 0.2,
+  a: Math.random(),
+  p: Math.random() * Math.PI * 2,
+}));
+function drawBg() {
+  bgCtx.fillStyle = '#060610';
+  bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+  for (const s of stars) {
+    s.p += 0.008;
+    bgCtx.beginPath();
+    bgCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    bgCtx.fillStyle = `rgba(255,255,255,${s.a*(0.3+0.3*Math.sin(s.p))})`;
+    bgCtx.fill();
+  }
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// ── PARTÍCULAS ───────────────────────────────────────────
+const pCanvas = document.getElementById('particles-canvas');
+const pCtx    = pCanvas.getContext('2d');
+pCanvas.width  = window.innerWidth;
+pCanvas.height = window.innerHeight;
+const particles = [];
+
+function addBurst(x, y, color, count=25) {
+  for (let i=0;i<count;i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = Math.random() * 9 + 2;
+    particles.push({
+      x, y,
+      vx: Math.cos(a)*s, vy: Math.sin(a)*s,
+      color, r: Math.random()*5+2,
+      life: 1, dec: Math.random()*0.025+0.012, grav:0.12
+    });
+  }
+}
+function drawParticles() {
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  for (const p of particles) {
+    pCtx.save();
+    pCtx.globalAlpha = p.life;
+    pCtx.shadowColor = p.color;
+    pCtx.shadowBlur  = 8;
+    pCtx.fillStyle   = p.color;
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.r*p.life, 0, Math.PI*2);
+    pCtx.fill();
+    pCtx.restore();
+    p.x += p.vx; p.y += p.vy;
+    p.vy += p.grav;
+    p.vx *= 0.92; p.vy *= 0.92;
+    p.life -= p.dec;
+  }
+  for (let i=particles.length-1;i>=0;i--) if(particles[i].life<=0) particles.splice(i,1);
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// ── UI HELPERS ───────────────────────────────────────────
+function updateHP() {
+  const pA = Math.max(0, state.hpA / MAX_HP);
+  const pB = Math.max(0, state.hpB / MAX_HP);
+  const totalVisible = pA + pB || 0.001;
+  const wA = (pA / totalVisible) * 100;
+  const wB = (pB / totalVisible) * 100;
+  document.getElementById('hp-a-fill').style.width = wA + '%';
+  document.getElementById('hp-b-fill').style.width = wB + '%';
+  document.getElementById('hp-a-pct').textContent  = Math.ceil(pA*100) + '%';
+  document.getElementById('hp-b-pct').textContent  = Math.ceil(pB*100) + '%';
+}
+
+function updateScore() {
+  document.getElementById('score-a-pts').textContent = state.scoreA;
+  document.getElementById('score-b-pts').textContent = state.scoreB;
+  document.getElementById('round-label').textContent  = `ROUND ${state.round}`;
+}
+
+function showAttack(side, username, dmg, reason) {
+  const feed = document.getElementById('attack-feed');
+  const div  = document.createElement('div');
+  const cls  = side === 'a' ? 'atk-a' : 'atk-b';
+  const clr  = side === 'a' ? '🔵' : '🔴';
+  const tgt  = side === 'a' ? NAME_B : NAME_A;
+  div.className = `attack-msg ${cls}`;
+  div.textContent = `${clr} @${username} atacou ${tgt} por ${dmg} de dano! (${reason})`;
+  feed.prepend(div);
+  setTimeout(() => div.remove(), 4200);
+  if (feed.children.length > 5) feed.lastChild.remove();
+}
+
+function showDmgPop(side, dmg) {
+  const el = document.createElement('div');
+  el.className = 'dmg-pop';
+  el.textContent = `-${dmg}💥`;
+  // posiciona no lado do alvo (oposto a quem atacou)
+  el.style.color = side === 'a' ? '#ff0050' : '#00f5ff';
+  const left = side === 'a' // side é o atacante → dano no lado B
+    ? (window.innerWidth * 0.7 + Math.random()*80 - 40)
+    : (window.innerWidth * 0.3 + Math.random()*80 - 40);
+  el.style.left = left + 'px';
+  el.style.top  = (window.innerHeight * 0.45 + Math.random()*60) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+function shakeTarget(side) {
+  const el = side === 'a'
+    ? document.getElementById('fighter-b-img')
+    : document.getElementById('fighter-a-img');
+  el.style.transform = 'scale(1.2) rotate(-8deg)';
+  setTimeout(() => el.style.transform = '', 200);
+}
+
+function addSupporter(side, username) {
+  const list = state.supporters[side];
+  if (list.includes(username)) return;
+  list.push(username);
+  const container = document.getElementById(side === 'a' ? 'supporters-a' : 'supporters-b');
+  const chip = document.createElement('div');
+  chip.className = 'supporter-chip';
+  chip.textContent = '@' + username.substring(0, 10);
+  chip.style.borderColor = side === 'a' ? 'rgba(0,245,255,0.3)' : 'rgba(255,0,80,0.3)';
+  container.prepend(chip);
+  if (container.children.length > 12) container.lastChild.remove();
+}
+
+// ── DANO ─────────────────────────────────────────────────
+function dealDamage(side, username, coins, reason) {
+  if (!state.inRound) return;
+  const dmg = Math.max(5, Math.round(Math.sqrt(coins) * 15));
+
+  if (side === 'a') {
+    state.hpB = Math.max(0, state.hpB - dmg);
+    addBurst(window.innerWidth*0.75, window.innerHeight*0.5, '#ff0050', 20 + Math.min(coins,50));
+    shakeTarget('a');
+  } else {
+    state.hpA = Math.max(0, state.hpA - dmg);
+    addBurst(window.innerWidth*0.25, window.innerHeight*0.5, '#00f5ff', 20 + Math.min(coins,50));
+    shakeTarget('b');
+  }
+
+  updateHP();
+  showAttack(side, username, dmg, reason);
+  showDmgPop(side, dmg);
+  addSupporter(side, username);
+
+  if (state.hpA <= 0 || state.hpB <= 0) {
+    triggerVictory(state.hpA <= 0 ? 'b' : 'a');
+  }
+}
+
+// ── VITÓRIA / PRÓXIMO ROUND ───────────────────────────────
+function triggerVictory(winner) {
+  state.inRound = false;
+
+  if (winner === 'a') {
+    state.scoreA++;
+    showWin(EMOJI_A, NAME_A, '#00f5ff');
+    addBurst(window.innerWidth*0.25, window.innerHeight*0.5, '#00f5ff', 120);
+  } else {
+    state.scoreB++;
+    showWin(EMOJI_B, NAME_B, '#ff0050');
+    addBurst(window.innerWidth*0.75, window.innerHeight*0.5, '#ff0050', 120);
+  }
+
+  updateScore();
+
+  // Conta regressiva e novo round
+  let countdown = 5;
+  document.getElementById('win-next').textContent = `Próximo round em ${countdown}s...`;
+  const t = setInterval(() => {
+    countdown--;
+    document.getElementById('win-next').textContent = `Próximo round em ${countdown}s...`;
+    if (countdown <= 0) {
+      clearInterval(t);
+      nextRound();
+    }
+  }, 1000);
+}
+
+function showWin(emoji, name, color) {
+  const ov = document.getElementById('win-overlay');
+  document.getElementById('win-emoji').textContent = emoji;
+  document.getElementById('win-title').textContent = name.toUpperCase() + ' VENCE!';
+  document.getElementById('win-title').style.color = color;
+  document.getElementById('win-title').style.textShadow = `0 0 40px ${color}`;
+  document.getElementById('win-sub').textContent = `+1 ponto para o ${name}!`;
+  ov.classList.add('show');
+}
+
+function nextRound() {
+  state.hpA = MAX_HP;
+  state.hpB = MAX_HP;
+  state.round++;
+  state.inRound = true;
+  state.supporters = { a: [], b: [] };
+  document.getElementById('supporters-a').innerHTML = '';
+  document.getElementById('supporters-b').innerHTML = '';
+  document.getElementById('win-overlay').classList.remove('show');
+  updateHP();
+  updateScore();
+}
+
+// ── CHAT ─────────────────────────────────────────────────
+const chatMsgs = [];
+function addChat(nick, comment, side) {
+  chatMsgs.push({ nick, comment, side });
+  if (chatMsgs.length > 40) chatMsgs.shift();
+  rebuildChat();
+}
+function rebuildChat() {
+  const msgs = chatMsgs.slice(-20);
+  const html = [...msgs,...msgs].map(m =>
+    `<span class="chat-item ${m.side ? 'c'+m.side : ''}"><strong>${m.nick}:</strong> ${m.comment}</span>`
+  ).join('');
+  document.getElementById('chat-row').innerHTML = html;
+}
+
+// ── DETECÇÃO DE LADO POR COMENTÁRIO ──────────────────────
+function detectSideFromComment(comment, username) {
+  const c = comment.toLowerCase().trim();
+  if (c === '1' || c === '1️⃣' || c.includes('time1') || c.includes('timea') || c.includes('team1') || c.includes('teama') || c === 'a') {
+    state.userSide[username] = 'a';
+    return 'a';
+  }
+  if (c === '2' || c === '2️⃣' || c.includes('time2') || c.includes('timeb') || c.includes('team2') || c.includes('teamb') || c === 'b') {
+    state.userSide[username] = 'b';
+    return 'b';
+  }
+  return null;
+}
+
+// ── DEMO MODE ─────────────────────────────────────────────
+function startDemo() {
+  const NAMES = ['pedro_gamer','maria_top','joao123','tiktoker_br','ana_fã','silvaXx','lucinha','caio_tiktok'];
+  const GIFTS = [
+    {name:'Rosa',coins:1},{name:'TikTok',coins:1},{name:'Panda',coins:5},
+    {name:'Love Bang',coins:25},{name:'Incrível',coins:100},{name:'Lion',coins:29999}
+  ];
+
+  // Faz comentários iniciais para popular os times
+  setTimeout(() => {
+    NAMES.forEach((n,i) => {
+      const side = i % 2 === 0 ? 'a' : 'b';
+      state.userSide[n] = side;
+      addSupporter(side, n);
+      addChat(n, side === 'a' ? '1️⃣' : '2️⃣', side);
+    });
+  }, 800);
+
+  setInterval(() => {
+    if (!state.inRound) return;
+    const name = NAMES[Math.floor(Math.random()*NAMES.length)];
+    const gift = GIFTS[Math.floor(Math.random()*GIFTS.length)];
+    const side = state.userSide[name] || (Math.random()<0.5?'a':'b');
+    state.userSide[name] = side;
+    dealDamage(side, name, gift.coins, `presente ${gift.name}`);
+  }, 1200);
+}
+
+// ── WEBSOCKET ─────────────────────────────────────────────
+function connectWS() {
+  const label = document.getElementById('score-center');
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/?user=${USER}&game=${GAME}`;
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => console.log('✅ WS conectado!');
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+
+      // Sistema
+      if (data.type === 'sys') {
+        const sysMsg = document.getElementById('sys-message');
+        sysMsg.textContent = data.text;
+        sysMsg.style.display = 'block';
+        if (data.event === 'error' || data.event === 'disconnected') {
+          sysMsg.style.borderColor = '#ff0050';
+          sysMsg.style.color = '#ff0050';
+        } else {
+          sysMsg.style.borderColor = '#00ff88';
+          sysMsg.style.color = '#00ff88';
+          setTimeout(() => sysMsg.style.display='none', 5000);
+        }
+        return;
+      }
+
+      // Presente → dano automático pelo lado do usuário (ou sorteia se não escolheu)
+      if (data.type === 'gift') {
+        const username = data.username;
+        const coins    = (data.coins || 1) * (data.repeatCount || 1);
+        let side = state.userSide[username];
+        if (!side) {
+          side = Math.random() < 0.5 ? 'a' : 'b';
+          state.userSide[username] = side;
+        }
+        dealDamage(side, username, coins, `🎁 ${data.giftName}`);
+      }
+
+      // Comentário → detecta escolha de time + dano leve
+      if (data.type === 'chat') {
+        const username = data.username;
+        const comment  = data.comment || '';
+        const detected = detectSideFromComment(comment, username);
+        const side     = detected || state.userSide[username];
+        addChat(data.nickname || username, comment, side || null);
+
+        // Comentário de time causa dano leve (1 moeda = dano base)
+        if (detected) {
+          dealDamage(detected, username, 1, '💬 comentário de apoio');
+        }
+      }
+
+      // Seguiu → dano leve (5 moedas)
+      if (data.type === 'follow') {
+        const side = state.userSide[data.username] || (Math.random()<0.5?'a':'b');
+        state.userSide[data.username] = side;
+        dealDamage(side, data.username, 5, '❤️ novo seguidor');
+        addChat(data.nickname || data.username, `seguiu! ❤️`, side);
+      }
+
+    } catch(err) { console.error(err); }
+  };
+
+  ws.onclose = () => { console.warn('WS fechou, reconectando...'); setTimeout(connectWS, 3000); };
+  ws.onerror = (err) => console.error('WS erro:', err);
+}
+
+// ── INICIAR ───────────────────────────────────────────────
+updateHP();
+updateScore();
+
+if (USER === 'demo') {
+  startDemo();
+} else {
+  connectWS();
+}
+</script>
+</body>
+</html>
