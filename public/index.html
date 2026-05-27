@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TKLive Games — Jogos Interativos para TikTok Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0b0c10;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ────────────────────────────────── */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background: rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(255,0,80,0.3);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 24px;
+    color: #ff0050;
+    text-shadow: 0 0 10px rgba(255,0,80,0.5);
+  }
+  .login-btn {
+    background: transparent;
+    border: 2px solid #00f5ff;
+    color: #00f5ff;
+    padding: 8px 24px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+  .login-btn:hover {
+    background: #00f5ff;
+    color: #000;
+    box-shadow: 0 0 15px rgba(0,245,255,0.4);
+  }
+
+  /* ── MAIN ──────────────────────────────────── */
+  main {
+    flex: 1;
+    padding: 60px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  h1 { font-size: 36px; margin-bottom: 10px; }
+  .subtitle { color: #aaa; font-size: 18px; margin-bottom: 40px; }
+
+  /* ── GRID ──────────────────────────────────── */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+  }
+  .game-card {
+    background: #1f2833;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+  }
+  .game-banner {
+    height: 160px;
+    background: linear-gradient(45deg, #1a0b2e, #ff0050);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+  }
+  .banner-corrida { background: linear-gradient(45deg, #0b2e13, #00ff88); }
+  .banner-baloes  { background: linear-gradient(45deg, #0b1e2e, #00f5ff); }
+  .game-info {
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .game-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .game-desc  { font-size: 15px; color: #bbb; margin-bottom: 20px; flex: 1; }
+
+  .badge {
+    position: absolute;
+    top: 16px; right: 16px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase;
+  }
+  .badge-active { background: #ff0050; color: #fff; }
+  .badge-soon   { background: #45a29e; color: #fff; }
+
+  /* ── BOTÕES ────────────────────────────────── */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s;
+    border: none;
+    margin-top: 10px;
+    text-align: center;
+  }
+  .btn-primary   { background: #00f5ff; color: #000; }
+  .btn-primary:hover { background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+  .btn-outline   { background: transparent; border: 2px solid #00f5ff; color: #00f5ff; }
+  .btn-outline:hover { background: rgba(0,245,255,0.1); }
+  .btn-ghost     { background: transparent; border: 2px solid rgba(255,255,255,0.15); color: #aaa; }
+  .btn-ghost:hover   { border-color: #fff; color: #fff; }
+  .btn:disabled  { background: #333; color: #777; cursor: not-allowed; border-color: transparent; }
+
+  /* ── MODAL BASE ────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #1a1e2a;
+    border: 1px solid #ff0050;
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    box-shadow: 0 0 60px rgba(255,0,80,0.2);
+    animation: modalIn .25s ease;
+  }
+  .modal.modal-wide { max-width: 700px; }
+  @keyframes modalIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 18px; right: 22px;
+    background: transparent; border: none;
+    color: #666; font-size: 26px; cursor: pointer; line-height: 1;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: #fff; }
+
+  .modal h2 {
+    font-family: 'Black Ops One', sans-serif;
+    color: #ff0050;
+    margin-bottom: 24px;
+    font-size: 22px;
+  }
+
+  /* ── MODAL CONFIGURAR ──────────────────────── */
+  .input-group { margin-bottom: 24px; }
+  .input-group label { display: block; margin-bottom: 8px; color: #00f5ff; font-weight: 700; text-transform: uppercase; font-size: 13px; }
+  .input-group input {
+    width: 100%; padding: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1);
+    color: #fff; border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700;
+    outline: none; transition: border-color 0.2s;
+  }
+  .input-group input:focus { border-color: #ff0050; }
+
+  .generate-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(45deg, #ff0050, #ff0099);
+    color: #fff; border: none; border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 18px;
+    cursor: pointer; text-transform: uppercase; transition: 0.3s;
+  }
+  .generate-btn:hover { box-shadow: 0 10px 20px rgba(255,0,80,0.4); }
+
+  .result-box {
+    margin-top: 20px; background: rgba(0,0,0,0.4);
+    border-radius: 8px; padding: 16px; display: none;
+  }
+  .result-box h3 { font-size: 13px; color: #00f5ff; margin-bottom: 8px; }
+  .link-box { word-break: break-all; font-family: monospace; font-size: 13px; color: #fff; margin-bottom: 12px; line-height: 1.5; }
+  .copy-btn { background: #fff; color: #000; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px; }
+
+  /* ── MODAL INFO ────────────────────────────── */
+  .info-section {
+    margin-bottom: 28px;
+  }
+  .info-section h3 {
+    font-family: 'Black Ops One', sans-serif;
+    font-size: 15px;
+    color: #00f5ff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .info-section h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(0,245,255,0.2);
+  }
+
+  .info-p { font-size: 15px; color: #bbb; line-height: 1.65; margin-bottom: 8px; }
+
+  .tier-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tier-table th, .tier-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .tier-table th { color: #aaa; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+  .tier-table tr:last-child td { border: none; }
+
+  .t1 { color: #6bcb77; }
+  .t2 { color: #00f5ff; }
+  .t3 { color: #ffd700; }
+  .t4 { color: #ff00ff; }
+
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li {
+    font-size: 15px; color: #bbb;
+    padding: 6px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .feature-list li::before { content: '✅'; font-size: 14px; }
+
+  .obs-steps { counter-reset: step; list-style: none; padding: 0; }
+  .obs-steps li {
+    counter-increment: step;
+    padding: 10px 0 10px 44px;
+    position: relative;
+    color: #bbb; font-size: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .obs-steps li:last-child { border: none; }
+  .obs-steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 8px;
+    width: 28px; height: 28px;
+    background: #ff0050; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+
+  .modal-scroll {
+    max-height: 72vh;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #ff0050 transparent;
+  }
+  .modal-scroll::-webkit-scrollbar { width: 5px; }
+  .modal-scroll::-webkit-scrollbar-thumb { background: #ff0050; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TKLIVE GAMES</div>
+  <button class="login-btn" onclick="alert('Login integrado em breve!')">Entrar</button>
+</header>
+
+<main>
+  <h1>Catálogo de Jogos</h1>
+  <p class="subtitle">Escolha o seu jogo, conecte a sua live e engaje sua audiência.</p>
+
+  <div class="games-grid">
+
+    <!-- JOGO 1 — Arena do Caos -->
+    <div class="game-card">
+      <div class="badge badge-active">Disponível</div>
+      <div class="game-banner">⚔️</div>
+      <div class="game-info">
+        <div class="game-title">Arena do Caos</div>
+        <div class="game-desc">Presentes viram guerreiros lutando até a morte! Tiers baseados em moedas, chefões gigantes e muito caos.</div>
+        <button class="btn btn-primary" onclick="openModal('config')">Configurar Live</button>
+        <button class="btn btn-outline" onclick="window.location.href='game.html?user=demo&game=arena'">Ver Demonstração</button>
+        <button class="btn btn-ghost"   onclick="openInfoModal()">Como Funciona ℹ️</button>
+      </div>
+    </div>
+
+    <!-- JOGO 2 -->
+    <div class="game-card">
+      <div class="badge badge-soon">Em Breve</div>
+      <div class="game-banner banner-corrida">🏎️</div>
+      <div class="game-info">
+        <div class="game-title">Corrida do Pix</div>
+        <div class="game-desc">Os espectadores impulsionam seus carros na pista mandando presentes. Quem chegar primeiro ganha!</div>
+        <button class="btn" disabled>Em breve</button>
+      </div>
+    </div>
+
+    <!-- JOGO 3 -->
+    <div class="game-card">
+      <div class="badge badge-soon">Em Breve</div>
+      <div class="game-banner banner-baloes">🎈</div>
+      <div class="game-info">
+        <div class="game-title">Guerra de Balões</div>
+        <div class="game-desc">A audiência enche o balão até estourar. Mecânicas cooperativas de doações em grupo.</div>
+        <button class="btn" disabled>Em breve</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ─── MODAL CONFIGURAR ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAll()">×</button>
+    <h2>⚙️ Configurar Transmissão</h2>
+
+    <div class="input-group">
+      <label>Seu @ do TikTok</label>
+      <input type="text" id="tiktok-user" placeholder="ex: neymarjr" autocomplete="off">
+    </div>
+
+    <button class="generate-btn" onclick="generateLink()">Gerar Link para o OBS</button>
+
+    <div class="result-box" id="result-box">
+      <h3>✅ Link exclusivo da sua live:</h3>
+      <div class="link-box" id="generated-link"></div>
+      <button class="copy-btn" onclick="copyLink()">Copiar Link</button>
+      <button class="copy-btn" style="background:#333;color:#fff;margin-left:8px;" onclick="testGame()">Abrir no Navegador</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL COMO FUNCIONA ──────────────────────────────────────── -->
+<div class="modal-overlay" id="info-modal">
+  <div class="modal modal-wide">
+    <button class="modal-close" onclick="closeAll()">×</button>
+    <h2>⚔️ Arena do Caos — Como Funciona?</h2>
+
+    <div class="modal-scroll">
+
+      <!-- O QUE É -->
+      <div class="info-section">
+        <h3>🎮 O que é</h3>
+        <p class="info-p">A <strong>Arena do Caos</strong> é um jogo interativo exibido em tela cheia (ideal para o OBS ou TikTok Live Studio) que transforma cada <strong>presente enviado na sua live</strong> em um guerreiro animado que batalha automaticamente contra todos os outros ao vivo.</p>
+        <p class="info-p">A audiência vira o protagonista: quanto mais caro o presente, mais poderoso é o guerreiro e mais chance ele tem de dominar a arena — gerando competição saudável entre os seus fãs.</p>
+      </div>
+
+      <!-- COMO A INTERAÇÃO FUNCIONA -->
+      <div class="info-section">
+        <h3>🎁 Interação com Presentes</h3>
+        <p class="info-p">No instante em que um espectador envia um presente no TikTok, o sistema captura automaticamente:</p>
+        <ul class="feature-list">
+          <li>O <strong>nome de usuário</strong> de quem enviou</li>
+          <li>A <strong>foto de perfil</strong> do usuário (exibida no guerreiro)</li>
+          <li>O <strong>nome do presente</strong> (Rosa, Lion, Universo…)</li>
+          <li>A <strong>quantidade de moedas</strong> do presente × nº de repetições</li>
+        </ul>
+        <p class="info-p" style="margin-top:10px;">Não é necessário configurar os presentes manualmente. <strong>Qualquer presente</strong> enviado na live é captado em tempo real.</p>
+      </div>
+
+      <!-- TIERS DE GUERREIRO -->
+      <div class="info-section">
+        <h3>🏆 Tiers de Guerreiro</h3>
+        <p class="info-p">O valor em moedas do presente define o tier e o poder do guerreiro:</p>
+        <table class="tier-table">
+          <tr>
+            <th>Tier</th><th>Moedas</th><th>Forma</th><th>HP</th><th>Dano</th>
+          </tr>
+          <tr>
+            <td class="t1">⚔️ Tier 1</td><td>1 – 9</td><td>Círculo</td><td>60</td><td>3</td>
+          </tr>
+          <tr>
+            <td class="t2">💎 Tier 2</td><td>10 – 49</td><td>Hexágono</td><td>150</td><td>8</td>
+          </tr>
+          <tr>
+            <td class="t3">👑 Tier 3</td><td>50 – 999</td><td>Diamante</td><td>300</td><td>18</td>
+          </tr>
+          <tr>
+            <td class="t4">🦁 Tier 4</td><td>1.000+</td><td>Estrela de 8pts</td><td>600</td><td>40</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- O QUE APARECE NA TELA -->
+      <div class="info-section">
+        <h3>🖥️ O que aparece na tela</h3>
+        <ul class="feature-list">
+          <li>Arena circular com efeitos de luz e grade animada</li>
+          <li><strong>Foto de perfil</strong> do usuário no centro do guerreiro</li>
+          <li>Barra de HP (vida) sob cada guerreiro</li>
+          <li>Nome do usuário exibido abaixo do guerreiro</li>
+          <li>Leaderboard ao vivo com o Top 7 de maiores presenteadores</li>
+          <li>Feed de chat rolando no rodapé da tela</li>
+          <li>Notificações animadas ao surgir cada novo guerreiro</li>
+          <li><strong>Mega Evento</strong> com explosões e letras gigantes para Tier 4</li>
+          <li>Efeito de tremor de tela e flash de cor por tier</li>
+          <li>Sistema de <strong>Combo</strong> multiplicando poder do guerreiro</li>
+          <li>Coroa 👑 para o guerreiro sobrevivente mais antigo</li>
+          <li>Texto "💀 ABATIDO!" ao derrotar um guerreiro</li>
+        </ul>
+      </div>
+
+      <!-- SISTEMA DE COMBOS -->
+      <div class="info-section">
+        <h3>⚡ Sistema de Combo</h3>
+        <p class="info-p">Se o mesmo usuário enviar presentes várias vezes em sequência rápida, o jogo ativa o modo <strong>COMBO</strong>, exibindo "COMBO x2", "x3" na tela e multiplicando o HP e o Dano do guerreiro. Isso incentiva spam de presentes e gera energia na live.</p>
+      </div>
+
+      <!-- COMO ADICIONAR NO OBS -->
+      <div class="info-section">
+        <h3>📡 Como adicionar no OBS / Live Studio</h3>
+        <ol class="obs-steps">
+          <li>Clique em <strong>"Configurar Live"</strong> e informe seu @</li>
+          <li>Clique em <strong>"Gerar Link para o OBS"</strong> e copie o link</li>
+          <li>No OBS Studio, adicione uma nova fonte do tipo <strong>Navegador (Browser Source)</strong></li>
+          <li>Cole o link copiado no campo de URL</li>
+          <li>Configure: Largura <strong>1080</strong> × Altura <strong>1920</strong></li>
+          <li>Inicie sua live no TikTok e os presentes começarão a aparecer automaticamente!</li>
+        </ol>
+      </div>
+
+    </div><!-- fim scroll -->
+  </div>
+</div>
+
+<script>
+  let selectedGame = '';
+
+  function openModal(type) {
+    selectedGame = 'arena';
+    closeAll();
+    document.getElementById('config-modal').classList.add('open');
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('tiktok-user').value = '';
+  }
+
+  function openInfoModal() {
+    closeAll();
+    document.getElementById('info-modal').classList.add('open');
+  }
+
+  function closeAll() {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+  }
+
+  // Fecha ao clicar fora do modal
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeAll();
+    });
+  });
+
+  function generateLink() {
+    let user = document.getElementById('tiktok-user').value.trim();
+    if (!user) { alert('Digite seu @ do TikTok!'); return; }
+    if (user.startsWith('@')) user = user.substring(1);
+
+    const finalUrl = `${window.location.origin}/game.html?user=${encodeURIComponent(user)}&game=${selectedGame}`;
+    document.getElementById('generated-link').textContent = finalUrl;
+    document.getElementById('result-box').style.display = 'block';
+  }
+
+  function copyLink() {
+    const link = document.getElementById('generated-link').textContent;
+    navigator.clipboard.writeText(link).then(() => alert('Link copiado! Cole no OBS Studio.'));
+  }
+
+  function testGame() {
+    window.location.href = document.getElementById('generated-link').textContent;
+  }
+</script>
+
+</body>
+</html>

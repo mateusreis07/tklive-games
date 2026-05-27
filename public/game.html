@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>⚔️ Arena do Caos — TikTok Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background:#000;
+    width:100vw; height:100vh;
+    overflow:hidden;
+    font-family:'Rajdhani', sans-serif;
+  }
+
+  canvas { display:block; position:fixed; top:0; left:0; }
+
+  /* ── UI OVERLAY ── */
+  #ui {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none;
+    z-index:10;
+  }
+
+  /* Leaderboard */
+  #leaderboard {
+    position:fixed; top:24px; right:24px;
+    background:rgba(0,0,0,0.75);
+    border:1px solid rgba(255,0,80,0.4);
+    border-radius:16px;
+    padding:16px 20px;
+    min-width:220px;
+    backdrop-filter:blur(12px);
+    box-shadow:0 0 30px rgba(255,0,80,0.15);
+  }
+  #leaderboard h3 {
+    font-family:'Black Ops One', sans-serif;
+    color:#ff0050;
+    font-size:15px;
+    letter-spacing:2px;
+    margin-bottom:12px;
+    text-transform:uppercase;
+  }
+  .lb-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:5px 0;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    font-size:13px;
+    color:#ddd;
+    gap:8px;
+  }
+  .lb-row .lb-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .lb-coins { color:#ffd700; font-weight:700; white-space:nowrap; }
+
+  /* Stats bar (top-left) */
+  #stats {
+    position:fixed; top:24px; left:24px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .stat-pill {
+    background:rgba(0,0,0,0.75);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px;
+    padding:8px 16px;
+    font-size:14px; font-weight:700;
+    color:#fff;
+    backdrop-filter:blur(8px);
+    display:flex; align-items:center; gap:8px;
+  }
+  .stat-pill span { color:#ff0050; }
+
+  /* Notifications */
+  #notifs {
+    position:fixed; bottom:80px; left:24px;
+    display:flex; flex-direction:column-reverse;
+    gap:8px;
+    max-height:300px;
+    overflow:hidden;
+  }
+  .notif {
+    background:rgba(0,0,0,0.88);
+    border-left:4px solid #ff0050;
+    border-radius:0 10px 10px 0;
+    padding:9px 14px;
+    font-size:13px; font-weight:600;
+    color:#fff;
+    max-width:280px;
+    animation:slideIn .3s ease, fadeOut .4s ease 4.6s forwards;
+    backdrop-filter:blur(8px);
+  }
+  .notif.tier2 { border-color:#00f5ff; }
+  .notif.tier3 { border-color:#ffd700; font-size:15px; }
+  .notif.tier4 { border-color:#ff00ff; font-size:17px; box-shadow:0 0 20px rgba(255,0,255,0.5); }
+
+  @keyframes slideIn {
+    from { transform:translateX(-110%); opacity:0; }
+    to   { transform:translateX(0);     opacity:1; }
+  }
+  @keyframes fadeOut {
+    to { opacity:0; transform:translateX(-20px); }
+  }
+
+  /* Mega event overlay */
+  #mega {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:20;
+  }
+  #mega.show { display:flex; animation:megaPulse .6s ease; }
+  #mega-title {
+    font-family:'Black Ops One', sans-serif;
+    font-size:72px;
+    color:#fff;
+    text-shadow:0 0 40px currentColor, 0 0 80px currentColor;
+    text-align:center;
+    line-height:1;
+  }
+  #mega-sub {
+    font-family:'Rajdhani', sans-serif;
+    font-size:28px; font-weight:700;
+    color:rgba(255,255,255,0.8);
+    margin-top:12px;
+    text-align:center;
+  }
+  @keyframes megaPulse {
+    0%   { transform:scale(.3); opacity:0; }
+    60%  { transform:scale(1.1); opacity:1; }
+    100% { transform:scale(1); }
+  }
+
+  /* Bottom bar */
+  #bottom {
+    position:fixed; bottom:0; left:0;
+    width:100%; height:54px;
+    background:rgba(0,0,0,0.8);
+    border-top:1px solid rgba(255,0,80,0.3);
+    backdrop-filter:blur(12px);
+    display:flex; align-items:center;
+    padding:0 24px;
+    gap:16px;
+    overflow:hidden;
+  }
+  #bottom-label {
+    font-family:'Black Ops One', sans-serif;
+    color:#ff0050;
+    font-size:13px;
+    letter-spacing:2px;
+    white-space:nowrap;
+  }
+  #chat-scroll {
+    display:flex;
+    gap:16px;
+    animation:scrollChat 20s linear infinite;
+    white-space:nowrap;
+  }
+  .chat-msg { font-size:13px; color:#bbb; }
+  .chat-msg strong { color:#fff; }
+  @keyframes scrollChat {
+    0%   { transform:translateX(0); }
+    100% { transform:translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <!-- Stats -->
+  <div id="stats">
+    <div class="stat-pill">⚔️ Guerreiros: <span id="s-warriors">0</span></div>
+    <div class="stat-pill">🎁 Presentes: <span id="s-gifts">0</span></div>
+    <div class="stat-pill">💰 Total: <span id="s-coins">0</span></div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard">
+    <h3>🏆 Top Presenteiros</h3>
+    <div id="lb-list">
+      <div class="lb-row" style="color:#555;font-size:12px">Aguardando presentes...</div>
+    </div>
+  </div>
+
+  <!-- Mega event -->
+  <div id="mega">
+    <div id="mega-title">🦁 MEGA PRESENTE!</div>
+    <div id="mega-sub">@usuario enviou Lion!</div>
+  </div>
+
+  <!-- Notifications -->
+  <div id="notifs"></div>
+</div>
+
+<!-- Bottom chat bar -->
+<div id="bottom">
+  <div id="bottom-label">💬 CHAT</div>
+  <div id="chat-scroll">
+    <span class="chat-msg"><strong>Arena do Caos</strong> — envie presentes para entrar na batalha! 🎁</span>
+    <span class="chat-msg">⚔️ Maior presente = guerreiro mais forte!</span>
+    <span class="chat-msg">🏆 Apareça no ranking dos top presenteiros!</span>
+    <span class="chat-msg">⚡ Combos multiplicam o poder do seu guerreiro!</span>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  ARENA DO CAOS — Motor do Jogo
+// ════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── ESTADO ──────────────────────────────────────────────────
+const state = {
+  warriors:    [],
+  particles:   [],
+  floatingTexts: [],
+  shake:       0,
+  flash:       null,
+  totalGifts:  0,
+  totalCoins:  0,
+  leaderboard: {},
+  combo:       { user: null, count: 0, timer: 0 },
+  arenaEvents: [],
+  bgStars:     [],
+};
+
+// Gerar estrelas de fundo
+for (let i = 0; i < 200; i++) {
+  state.bgStars.push({
+    x: Math.random(),
+    y: Math.random(),
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random(),
+    pulse: Math.random() * Math.PI * 2,
+  });
+}
+
+// ── PALETAS POR TIER ────────────────────────────────────────
+const TIER_CONFIG = {
+  1: { size:18, power:3,  hp:60,   speed:2.2, color:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff'], particles:12 },
+  2: { size:30, power:8,  hp:150,  speed:2.8, color:['#00f5ff','#0099ff','#00d4aa'],           particles:30 },
+  3: { size:44, power:18, hp:300,  speed:2.0, color:['#ffd700','#ff9500','#ffcc00'],           particles:60 },
+  4: { size:62, power:40, hp:600,  speed:1.6, color:['#ff00ff','#bf00ff','#ff0099','#ffffff'], particles:120 },
+};
+
+function getTier(coins) {
+  if (coins >= 1000) return 4;
+  if (coins >= 50)   return 3;
+  if (coins >= 10)   return 2;
+  return 1;
+}
+
+// ── SPAWN GUERREIRO ─────────────────────────────────────────
+function spawnWarrior(username, nickname, giftName, coins, profilePicUrl) {
+  const tier = getTier(coins);
+  const cfg  = TIER_CONFIG[tier];
+  const cx   = canvas.width  / 2;
+  const cy   = canvas.height / 2;
+  const arenaR = Math.min(canvas.width, canvas.height) * 0.41;
+
+  // Spawna na borda da arena
+  const angle = Math.random() * Math.PI * 2;
+  const spawnR = arenaR * 0.95;
+  const x = cx + Math.cos(angle) * spawnR;
+  const y = cy + Math.sin(angle) * spawnR;
+
+  const colors = cfg.color;
+  const color  = colors[Math.floor(Math.random() * colors.length)];
+
+  // Combo check
+  let powerMult = 1;
+  if (state.combo.user === username && state.combo.timer > 0) {
+    state.combo.count++;
+    powerMult = 1 + state.combo.count * 0.5;
+    spawnFloatingText(x, y - 30, `COMBO x${state.combo.count+1}!`, '#ff9500', 22);
+  } else {
+    state.combo = { user: username, count: 0, timer: 90 };
+  }
+
+  let img = null;
+  if (profilePicUrl) {
+    img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = profilePicUrl;
+  }
+
+  const warrior = {
+    id:       Math.random().toString(36).substr(2),
+    name:     (nickname || username).substring(0, 14),
+    username,
+    x, y,
+    vx: (Math.random() - .5) * 2,
+    vy: (Math.random() - .5) * 2,
+    hp:     cfg.hp * powerMult,
+    maxHp:  cfg.hp * powerMult,
+    size:   cfg.size + (tier >= 3 ? Math.random() * 8 : 0),
+    power:  cfg.power * powerMult,
+    speed:  cfg.speed,
+    color,
+    tier,
+    giftName,
+    coins,
+    img,
+    alive:      true,
+    deathTimer: 0,
+    atkCD:      0,
+    glowPhase:  Math.random() * Math.PI * 2,
+    age:        0,
+    spin:       0,
+    spinSpeed:  (Math.random() - .5) * 0.08,
+    target:     null,
+    isCrown:    false,
+  };
+
+  state.warriors.push(warrior);
+  state.totalGifts++;
+  state.totalCoins += coins;
+
+  // Efeito de entrada
+  burst(x, y, color, cfg.particles, tier);
+
+  // Shake e flash por tier
+  if (tier >= 2) {
+    state.shake = Math.max(state.shake, [0,5,10,20][tier-1]);
+    state.flash = { color, alpha: [0,.2,.4,.7][tier-1], dur: [0,15,25,45][tier-1] };
+  }
+
+  // MEGA evento tier4
+  if (tier === 4) triggerMegaEvent(nickname || username, giftName, color);
+
+  // Texto flutuante de entrada
+  spawnFloatingText(x, y - cfg.size - 10, `${giftName} 🎁`, color, tier === 4 ? 22 : 16);
+
+  // Leaderboard
+  if (!state.leaderboard[username]) state.leaderboard[username] = { name: nickname || username, coins: 0, kills: 0 };
+  state.leaderboard[username].coins += coins;
+  updateLeaderboard();
+  updateStats();
+
+  // Notificação
+  showNotif(nickname || username, giftName, coins, tier, color);
+}
+
+// ── EFEITOS VISUAIS ─────────────────────────────────────────
+function burst(x, y, color, count, tier) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = Math.random() * (tier >= 3 ? 12 : 6) + 2;
+    state.particles.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      color,
+      r:    Math.random() * (tier >= 3 ? 8 : 4) + 2,
+      life: 1,
+      dec:  Math.random() * .02 + .01,
+      grav: Math.random() * .1,
+      type: 'spark',
+    });
+  }
+}
+
+function spawnHitParticles(x, y, color) {
+  for (let i = 0; i < 6; i++) {
+    const a = Math.random() * Math.PI * 2;
+    state.particles.push({
+      x, y,
+      vx: Math.cos(a) * 5,
+      vy: Math.sin(a) * 5,
+      color, r: 3, life: 1, dec: .06, grav: .05, type: 'hit',
+    });
+  }
+}
+
+function spawnFloatingText(x, y, text, color, size=14) {
+  state.floatingTexts.push({ x, y, vy: -1.5, text, color, size, life: 1, dec: .015 });
+}
+
+function triggerMegaEvent(username, giftName, color) {
+  const el = document.getElementById('mega');
+  document.getElementById('mega-title').style.color = color;
+  document.getElementById('mega-title').style.textShadow = `0 0 40px ${color}, 0 0 80px ${color}`;
+  document.getElementById('mega-title').textContent = `🔥 MEGA PRESENTE!`;
+  document.getElementById('mega-sub').textContent = `@${username} enviou ${giftName}!`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+
+  // Rajada global
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const cx = canvas.width/2, cy = canvas.height/2;
+      burst(cx + (Math.random()-.5)*400, cy + (Math.random()-.5)*300, color, 30, 4);
+    }, i * 180);
+  }
+}
+
+// ── UI ───────────────────────────────────────────────────────
+function showNotif(username, giftName, coins, tier, color) {
+  const div = document.getElementById('notifs');
+  const n = document.createElement('div');
+  n.className = 'notif tier' + tier;
+  n.style.borderLeftColor = color;
+  const emojis = ['🎁','💎','👑','🦁'];
+  n.innerHTML = `${emojis[tier-1]} <strong>@${username}</strong> enviou <em>${giftName}</em>${coins > 1 ? ` (${coins} 💰)` : ''}`;
+  div.prepend(n);
+  setTimeout(() => n.remove(), 5100);
+}
+
+function updateLeaderboard() {
+  const sorted = Object.values(state.leaderboard)
+    .sort((a,b) => b.coins - a.coins)
+    .slice(0, 7);
+
+  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'];
+  document.getElementById('lb-list').innerHTML = sorted.map((e,i) =>
+    `<div class="lb-row">
+      <span>${medals[i]}</span>
+      <span class="lb-name">${e.name}</span>
+      <span class="lb-coins">${e.coins} 💰</span>
+    </div>`
+  ).join('');
+}
+
+function updateStats() {
+  document.getElementById('s-warriors').textContent = state.warriors.filter(w=>w.alive).length;
+  document.getElementById('s-gifts').textContent    = state.totalGifts;
+  document.getElementById('s-coins').textContent    = state.totalCoins.toLocaleString('pt-BR');
+}
+
+// ── CHAT SCROLL ──────────────────────────────────────────────
+const chatMsgs = [];
+function addChatMsg(nickname, comment) {
+  chatMsgs.push({ nickname, comment });
+  if (chatMsgs.length > 40) chatMsgs.shift();
+  rebuildChat();
+}
+function rebuildChat() {
+  const el = document.getElementById('chat-scroll');
+  const msgs = chatMsgs.slice(-20);
+  const html = [...msgs, ...msgs].map(m =>
+    `<span class="chat-msg"><strong>${m.nickname}:</strong> ${m.comment}</span>`
+  ).join('');
+  el.innerHTML = html;
+}
+
+// ── LOOP DE JOGO ─────────────────────────────────────────────
+function update() {
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  const arenaR = Math.min(W,H) * 0.41;
+
+  // Shake decay
+  if (state.shake > 0.1) state.shake *= 0.84; else state.shake = 0;
+
+  // Flash decay
+  if (state.flash) {
+    state.flash.alpha -= 1 / state.flash.dur;
+    if (state.flash.alpha <= 0) state.flash = null;
+  }
+
+  // Combo timer
+  if (state.combo.timer > 0) state.combo.timer--;
+
+  const alive = state.warriors.filter(w => w.alive);
+
+  // Crown: guerreiro mais velho ganha coroa
+  if (alive.length > 0) {
+    let oldest = alive.reduce((a,b) => a.age > b.age ? a : b);
+    alive.forEach(w => w.isCrown = w.id === oldest.id);
+  }
+
+  for (const w of alive) {
+    w.age++;
+    w.glowPhase += 0.04;
+    w.spin += w.spinSpeed;
+    w.atkCD = Math.max(0, w.atkCD - 1);
+
+    // Target nearest enemy
+    let best = null, bestD = Infinity;
+    for (const o of alive) {
+      if (o.id === w.id) continue;
+      const dx = o.x - w.x, dy = o.y - w.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < bestD) { bestD = d; best = o; }
+    }
+    w.target = best;
+
+    if (best) {
+      const dx = best.x - w.x, dy = best.y - w.y;
+      const d  = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+      w.vx += (dx/d) * w.speed * 0.12;
+      w.vy += (dy/d) * w.speed * 0.12;
+
+      // Ataque
+      if (d < w.size + best.size + 4 && w.atkCD === 0) {
+        best.hp -= w.power;
+        w.atkCD  = 28;
+        spawnHitParticles((w.x + best.x)/2, (w.y + best.y)/2, w.color);
+
+        if (best.hp <= 0) {
+          best.alive = false;
+          burst(best.x, best.y, best.color, 40, best.tier);
+          state.shake = Math.max(state.shake, 10);
+          if (state.leaderboard[w.username]) {
+            state.leaderboard[w.username].kills++;
+          }
+          spawnFloatingText(best.x, best.y - 20, '💀 ABATIDO!', '#ff0050', 18);
+          updateLeaderboard();
+        }
+      }
+    } else {
+      // Vagar pela arena
+      w.vx += (Math.random() - .5) * .6;
+      w.vy += (Math.random() - .5) * .6;
+    }
+
+    // Limitar velocidade
+    const spd = Math.sqrt(w.vx**2 + w.vy**2);
+    const ms  = w.speed * 1.4;
+    if (spd > ms) { w.vx = w.vx/spd*ms; w.vy = w.vy/spd*ms; }
+
+    w.x += w.vx;
+    w.y += w.vy;
+    w.vx *= 0.93;
+    w.vy *= 0.93;
+
+    // Limitar à arena (círculo)
+    const ddx = w.x - cx, ddy = w.y - cy;
+    const dd  = Math.sqrt(ddx**2 + ddy**2);
+    if (dd + w.size > arenaR) {
+      const nx = ddx/dd, ny = ddy/dd;
+      w.x = cx + nx * (arenaR - w.size);
+      w.y = cy + ny * (arenaR - w.size);
+      w.vx -= nx * 1.5;
+      w.vy -= ny * 1.5;
+    }
+  }
+
+  // Limpar guerreiros mortos há muito tempo
+  state.warriors = state.warriors.filter(w => {
+    if (!w.alive) { w.deathTimer++; return w.deathTimer < 60; }
+    return true;
+  });
+
+  // Particles
+  for (const p of state.particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += p.grav;
+    p.vx *= .91; p.vy *= .91;
+    p.life -= p.dec;
+  }
+  state.particles = state.particles.filter(p => p.life > 0);
+
+  // Limitar partículas
+  if (state.particles.length > 1200) state.particles.splice(0, 200);
+
+  // Floating texts
+  for (const t of state.floatingTexts) {
+    t.y += t.vy; t.life -= t.dec;
+  }
+  state.floatingTexts = state.floatingTexts.filter(t => t.life > 0);
+
+  // Limitar guerreiros
+  const MAX_WARRIORS = 60;
+  const alivePart = state.warriors.filter(w=>w.alive);
+  if (alivePart.length > MAX_WARRIORS) {
+    // Remove os mais fracos
+    alivePart.sort((a,b) => a.hp - b.hp);
+    alivePart.slice(0, alivePart.length - MAX_WARRIORS).forEach(w => {
+      w.alive = false;
+      burst(w.x, w.y, w.color, 15, 1);
+    });
+  }
+
+  updateStats();
+}
+
+// ── RENDERIZAÇÃO ─────────────────────────────────────────────
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  const arenaR = Math.min(W,H) * 0.41;
+  const sx = state.shake > 0 ? (Math.random()-.5)*state.shake*2 : 0;
+  const sy = state.shake > 0 ? (Math.random()-.5)*state.shake*2 : 0;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // Fundo
+  ctx.fillStyle = '#060610';
+  ctx.fillRect(-30, -30, W+60, H+60);
+
+  // Estrelas
+  const t = Date.now() * 0.001;
+  for (const s of state.bgStars) {
+    s.pulse += 0.01;
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${s.a * (.4 + .4*Math.sin(s.pulse))})`;
+    ctx.fill();
+  }
+
+  // Gradiente da arena
+  const ag = ctx.createRadialGradient(cx, cy, 0, cx, cy, arenaR);
+  ag.addColorStop(0,   'rgba(30,5,60,0.9)');
+  ag.addColorStop(0.7, 'rgba(10,2,30,0.95)');
+  ag.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, arenaR, 0, Math.PI*2);
+  ctx.fillStyle = ag;
+  ctx.fill();
+
+  // Grid da arena
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, arenaR, 0, Math.PI*2);
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  const grid = 70;
+  for (let x = (cx % grid); x < W; x += grid) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  for (let y = (cy % grid); y < H; y += grid) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  // Círculos concêntricos
+  ctx.strokeStyle = 'rgba(255,0,80,0.06)';
+  [.3,.6,.85].forEach(r => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, arenaR * r, 0, Math.PI*2);
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // Borda da arena
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,0,80,0.7)';
+  ctx.shadowColor  = '#ff0050';
+  ctx.shadowBlur   = 25;
+  ctx.beginPath();
+  ctx.arc(cx, cy, arenaR, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Decorações da borda (pontos luminosos)
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + t * .3;
+    const px = cx + Math.cos(a) * arenaR;
+    const py = cy + Math.sin(a) * arenaR;
+    const pulse = .5 + .5 * Math.sin(t * 3 + i);
+    ctx.beginPath();
+    ctx.arc(px, py, 4 + pulse * 2, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,0,80,${.4 + .6*pulse})`;
+    ctx.shadowColor = '#ff0050';
+    ctx.shadowBlur  = 10 + pulse * 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // ── PARTÍCULAS ──
+  for (const p of state.particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur  = 8;
+    ctx.fillStyle   = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── GUERREIROS ──
+  const alive = state.warriors.filter(w => w.alive);
+
+  for (const w of alive) {
+    ctx.save();
+    ctx.translate(w.x, w.y);
+
+    const hpRatio = w.hp / w.maxHp;
+    const glow = 8 + 6 * Math.sin(w.glowPhase);
+    const glowExtra = w.tier >= 3 ? 15 : 0;
+
+    ctx.shadowColor = w.color;
+    ctx.shadowBlur  = glow + glowExtra;
+
+    // Aura de ataque (flash vermelho)
+    if (w.atkCD > 25) {
+      ctx.beginPath();
+      ctx.arc(0, 0, w.size * 1.6, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,0,50,0.2)';
+      ctx.fill();
+    }
+
+    // Corpo do guerreiro (formas por tier)
+    ctx.fillStyle = w.color;
+    ctx.globalAlpha = 0.92;
+
+    if (w.tier === 4) {
+      // Estrela de 8 pontas
+      ctx.save();
+      ctx.rotate(w.spin);
+      drawStar(ctx, 0, 0, w.size, w.size * .45, 8);
+      ctx.restore();
+      // Segundo anél
+      ctx.save();
+      ctx.rotate(-w.spin * .7);
+      ctx.globalAlpha = .3;
+      drawStar(ctx, 0, 0, w.size * 1.5, w.size * .8, 8);
+      ctx.restore();
+    } else if (w.tier === 3) {
+      // Diamante
+      ctx.save();
+      ctx.rotate(w.spin);
+      ctx.beginPath();
+      ctx.moveTo(0, -w.size);
+      ctx.lineTo(w.size*.65, 0);
+      ctx.lineTo(0, w.size);
+      ctx.lineTo(-w.size*.65, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else if (w.tier === 2) {
+      // Hexágono
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i/6)*Math.PI*2 + w.spin;
+        const m = i === 0 ? 'moveTo' : 'lineTo';
+        ctx[m](Math.cos(a)*w.size, Math.sin(a)*w.size);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Círculo (tier 1)
+      ctx.beginPath();
+      ctx.arc(0, 0, w.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Foto de perfil
+    if (w.img && w.img.complete && w.img.naturalWidth > 0) {
+      ctx.save();
+      ctx.beginPath();
+      let imgRadius = w.size * 0.6;
+      if (w.tier === 1) imgRadius = w.size * 0.9;
+      if (w.tier === 4) imgRadius = w.size * 0.5;
+      
+      ctx.arc(0, 0, imgRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.globalAlpha = 1;
+      ctx.drawImage(w.img, -imgRadius, -imgRadius, imgRadius * 2, imgRadius * 2);
+      ctx.restore();
+      
+      // Borda da foto
+      ctx.beginPath();
+      ctx.arc(0, 0, imgRadius, 0, Math.PI * 2);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.stroke();
+    }
+
+    // Coroa para o mais antigo
+    if (w.isCrown && alive.length > 1) {
+      ctx.font = `${w.size * .9}px serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.fillText('👑', 0, -w.size - 4);
+    }
+
+    // HP bar
+    ctx.shadowBlur = 0;
+    const bw = w.size * 2.6, bh = 5;
+    ctx.globalAlpha = .8;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(-bw/2, w.size + 6, bw, bh);
+    const hpColor = hpRatio > .5 ? '#00e676' : hpRatio > .25 ? '#ffd600' : '#f44336';
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(-bw/2, w.size + 6, bw * hpRatio, bh);
+
+    // Nome
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur  = 4;
+    ctx.fillStyle   = '#fff';
+    const fs = Math.max(10, Math.min(14, w.size * .55));
+    ctx.font        = `700 ${fs}px Rajdhani, sans-serif`;
+    ctx.textAlign   = 'center';
+    ctx.fillText(w.name, 0, w.size + 22);
+
+    ctx.restore();
+  }
+
+  // Textos flutuantes
+  for (const t2 of state.floatingTexts) {
+    ctx.save();
+    ctx.globalAlpha = t2.life;
+    ctx.font        = `700 ${t2.size}px Rajdhani, sans-serif`;
+    ctx.fillStyle   = t2.color;
+    ctx.textAlign   = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur  = 5;
+    ctx.fillText(t2.text, t2.x, t2.y);
+    ctx.restore();
+  }
+
+  // Texto central (se arena vazia)
+  if (alive.length === 0) {
+    ctx.save();
+    ctx.globalAlpha = .5 + .3 * Math.sin(t * 2);
+    ctx.font = `700 22px Black Ops One, sans-serif`;
+    ctx.fillStyle = '#ff0050';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ff0050';
+    ctx.shadowBlur  = 15;
+    ctx.fillText('⚔️  ENVIE PRESENTES PARA ENTRAR NA BATALHA!  ⚔️', cx, cy);
+    ctx.restore();
+  }
+
+  // Flash de tela
+  if (state.flash && state.flash.alpha > 0) {
+    ctx.fillStyle   = state.flash.color;
+    ctx.globalAlpha = state.flash.alpha * .35;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore(); // end shake translate
+}
+
+function drawStar(ctx, x, y, rOuter, rInner, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const m = i === 0 ? 'moveTo' : 'lineTo';
+    ctx[m](x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ════════════════════════════════════════════════════════════
+//  WEBSOCKET — Conecta ao servidor TikTok
+// ════════════════════════════════════════════════════════════
+function connectWS() {
+  const params = new URLSearchParams(window.location.search);
+  const user = params.get('user') || 'demo';
+  const game = params.get('game') || 'arena';
+  
+  const label = document.getElementById('bottom-label');
+  if(label) label.textContent = `💬 CHAT - @${user}`;
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/?user=${user}&game=${game}`;
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => console.log('✅ WebSocket conectado!');
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+
+      if (data.type === 'gift') {
+        const total = (data.coins || 1) * (data.repeatCount || 1);
+        spawnWarrior(data.username, data.nickname, data.giftName, total, data.profilePic);
+      }
+
+      if (data.type === 'chat') {
+        addChatMsg(data.nickname || data.username, data.comment);
+      }
+
+      if (data.type === 'follow') {
+        spawnFloatingText(
+          canvas.width * .5 + (Math.random()-.5)*200,
+          canvas.height * .3,
+          `❤️ ${data.nickname} seguiu!`, '#ff6b9d', 16
+        );
+      }
+
+      if (data.type === 'like') {
+        // Micro partícula
+        const x = canvas.width  * (.2 + Math.random()*.6);
+        const y = canvas.height * (.2 + Math.random()*.6);
+        burst(x, y, '#ff6b9d', 5, 1);
+      }
+
+    } catch (err) {
+      console.error('Erro ao parsear mensagem:', err);
+    }
+  };
+
+  ws.onclose = () => {
+    console.warn('WebSocket fechou, reconectando em 3s...');
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = (err) => console.error('WS erro:', err);
+}
+
+connectWS();
+</script>
+</body>
+</html>

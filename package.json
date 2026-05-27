@@ -1,0 +1,15 @@
+{
+  "name": "tiktok-arena-do-caos",
+  "version": "1.0.0",
+  "description": "Jogo interativo para TikTok Live — presentes viram guerreiros na arena!",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --demo"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "tiktok-live-connector": "^2.1.1-beta1",
+    "ws": "^8.21.0"
+  }
+}
