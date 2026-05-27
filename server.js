@@ -82,7 +82,7 @@ function startTikTokConnection(user) {
   const tiktok = new WebcastPushConnection(user, {
     processInitialData: false,
     fetchRoomInfoOnConnect: true,
-    enableExtendedGiftInfo: true,
+    enableExtendedGiftInfo: false,
   });
 
   activeTiktokConnections.set(user, tiktok);
