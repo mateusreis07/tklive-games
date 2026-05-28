@@ -183,8 +183,8 @@
     pointer-events: none;
     align-content: flex-end;
   }
-  #supporters-a { left: 6px; justify-content: flex-start; }
-  #supporters-b { right: 6px; justify-content: flex-end; }
+  #supporters-a { left: 6px; justify-content: flex-start; transform-origin: bottom left; transition: transform 0.3s ease; }
+  #supporters-b { right: 6px; justify-content: flex-end; transform-origin: bottom right; transition: transform 0.3s ease; }
 
   .sup-avatar {
     width: 40px;
@@ -228,12 +228,9 @@
   /* Projéteis de ataque */
   .projectile {
     position: fixed;
-    border-radius: 50px;
     pointer-events: none;
     z-index: 50;
     transform-origin: left center;
-    box-shadow: 0 0 15px currentColor, 0 0 5px #fff;
-    transition: width 0.4s ease-out, top 0.4s ease-out, left 0.4s ease-out;
   }
 
   /* Particles canvas */
@@ -849,8 +846,11 @@ function addSupporter(side, username, profilePic, tier = 1) {
 
   container.appendChild(avatar);
 
-  // Mantém máx 20 por time
-  if (container.children.length > 20) container.firstChild.remove();
+  // Escala dinâmica para caber todo mundo na tela infinitamente
+  const count = container.children.length;
+  // A partir de 12 apoiadores, o tamanho começa a diminuir suavemente
+  const scale = count > 12 ? Math.max(0.15, 1 - ((count - 12) * 0.025)) : 1;
+  container.style.transform = `scale(${scale})`;
 }
 
 function spawnFloatingBubble() {} // kept for compat
@@ -885,31 +885,28 @@ function shootLaser(username, targetSide, color, tier) {
   const proj = document.createElement('div');
   proj.className = 'projectile';
   
-  // Espessura baseada no tier
-  const height = 4 + tier * 6;
-  proj.style.cssText = `
-    left: ${startX}px;
-    top: ${startY - height/2}px;
-    width: 0px;
-    height: ${height}px;
-    background: ${color};
-    color: ${color};
-    transform: rotate(${angle}rad);
-  `;
+  if (tier === 1) {
+    // Laser Fino
+    proj.style.cssText = `left:${startX}px; top:${startY-4}px; width:0px; height:8px; background:${color}; color:${color}; transform:rotate(${angle}rad); border-radius:5px; box-shadow:0 0 10px currentColor; transition: width 0.2s ease-out, top 0.2s ease-out, left 0.2s ease-out;`;
+    setTimeout(() => { proj.style.width = `${dist}px`; }, 10);
+    setTimeout(() => { proj.style.left = `${endX}px`; proj.style.top = `${endY}px`; proj.style.width = '0px'; }, 200);
+  } else if (tier === 2) {
+    // Bola de Energia (Fireball)
+    proj.style.cssText = `left:${startX}px; top:${startY-15}px; width:30px; height:30px; background:${color}; color:${color}; border-radius:50%; box-shadow:0 0 20px currentColor, 0 0 40px #fff; transform:translate(-50%,-50%); transition: left 0.2s linear, top 0.2s linear;`;
+    setTimeout(() => { proj.style.left = `${endX}px`; proj.style.top = `${endY}px`; }, 10);
+  } else if (tier === 3) {
+    // Feixe Intenso
+    proj.style.cssText = `left:${startX}px; top:${startY-10}px; width:0px; height:20px; background:#fff; color:${color}; transform:rotate(${angle}rad); border-radius:10px; box-shadow:0 0 20px currentColor, 0 0 40px currentColor; transition: width 0.2s ease-out, top 0.2s ease-out, left 0.2s ease-out;`;
+    setTimeout(() => { proj.style.width = `${dist}px`; }, 10);
+    setTimeout(() => { proj.style.left = `${endX}px`; proj.style.top = `${endY}px`; proj.style.width = '0px'; }, 200);
+  } else if (tier >= 4) {
+    // Meteoro Massivo Lendário
+    proj.style.cssText = `left:${startX}px; top:${startY-40}px; width:80px; height:80px; background:#fff; color:${color}; border-radius:50%; box-shadow:0 0 50px currentColor, 0 0 100px currentColor; transform:translate(-50%,-50%); transition: left 0.2s ease-in, top 0.2s ease-in;`;
+    setTimeout(() => { proj.style.left = `${endX}px`; proj.style.top = `${endY}px`; }, 10);
+  }
+  
   document.body.appendChild(proj);
-
-  // Animação CSS do projétil
-  setTimeout(() => {
-    proj.style.width = `${dist}px`;
-  }, 10);
-
-  setTimeout(() => {
-    proj.style.left = `${endX}px`;
-    proj.style.top = `${endY}px`;
-    proj.style.width = '0px';
-  }, 200); // 200ms viagem
-
-  setTimeout(() => proj.remove(), 600);
+  setTimeout(() => proj.remove(), 400);
 }
 
 // ── DANO ─────────────────────────────────────────────────
