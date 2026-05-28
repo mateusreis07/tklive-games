@@ -755,16 +755,7 @@ function updateScore() {
 }
 
 function showAttack(side, username, dmg, reason) {
-  const feed = document.getElementById('attack-feed');
-  const div  = document.createElement('div');
-  const cls  = side === 'a' ? 'atk-a' : 'atk-b';
-  const clr  = side === 'a' ? '🔵' : '🔴';
-  const tgt  = side === 'a' ? NAME_B : NAME_A;
-  div.className = `attack-msg ${cls}`;
-  div.textContent = `${clr} @${username} atacou ${tgt} por ${dmg} de dano! (${reason})`;
-  feed.prepend(div);
-  setTimeout(() => div.remove(), 4200);
-  if (feed.children.length > 5) feed.lastChild.remove();
+  // Desativado a pedido do usuário para não poluir a tela com histórico no meio
 }
 
 function showDmgPop(side, dmg) {
