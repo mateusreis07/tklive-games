@@ -200,6 +200,40 @@
     animation: popIn 0.3s ease, bobFloat calc(2.5s + var(--i,0) * 0.3s) ease-in-out infinite;
     animation-delay: 0s, calc(var(--i,0) * 0.4s);
     flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* Tiers de presentes */
+  .tier-2 {
+    width: 55px !important; height: 55px !important;
+    box-shadow: 0 0 20px currentColor, inset 0 0 10px currentColor;
+    border-width: 3px; z-index: 40;
+  }
+  .tier-3 {
+    width: 75px !important; height: 75px !important;
+    box-shadow: 0 0 35px currentColor, 0 0 10px #fff, inset 0 0 15px currentColor;
+    border-width: 4px; z-index: 41;
+  }
+  .tier-4 {
+    width: 100px !important; height: 100px !important;
+    box-shadow: 0 0 50px currentColor, 0 0 20px #fff, inset 0 0 25px currentColor;
+    border-width: 5px; z-index: 42;
+    animation: popIn 0.3s ease, bobFloat calc(2.5s + var(--i,0) * 0.3s) ease-in-out infinite, pulseLegendary 1s alternate infinite;
+  }
+  @keyframes pulseLegendary {
+    from { filter: brightness(1) drop-shadow(0 0 10px #fff); }
+    to   { filter: brightness(1.5) drop-shadow(0 0 30px #fff); }
+  }
+
+  /* Projéteis de ataque */
+  .projectile {
+    position: fixed;
+    border-radius: 50px;
+    pointer-events: none;
+    z-index: 50;
+    transform-origin: left center;
+    box-shadow: 0 0 15px currentColor, 0 0 5px #fff;
+    transition: width 0.4s ease-out, top 0.4s ease-out, left 0.4s ease-out;
   }
 
   /* Particles canvas */
@@ -759,17 +793,23 @@ function shakeTarget(side) {
   setTimeout(() => el.style.transform = '', 200);
 }
 
-function addSupporter(side, username, profilePic) {
+function addSupporter(side, username, profilePic, tier = 1) {
   const list = state.supporters[side];
 
-  // Se já existe, só re-anima (pipoca de novo)
+  // Se já existe, atualiza tier se for maior
   if (list.includes(username)) {
     const existing = document.getElementById('sup-' + username);
     if (existing) {
       existing.style.animation = 'none';
       void existing.offsetWidth; // reflow
       const i = list.indexOf(username);
-      existing.style.animation = `popIn 0.3s ease, bobFloat ${2.5 + i * 0.3}s ease-in-out ${i * 0.4}s infinite`;
+      if (tier >= 4) existing.classList.add('tier-4');
+      else if (tier === 3) existing.classList.add('tier-3');
+      else if (tier === 2) existing.classList.add('tier-2');
+      
+      const anims = ['popIn 0.3s ease', `bobFloat ${2.5 + i * 0.3}s ease-in-out ${i * 0.4}s infinite`];
+      if (existing.classList.contains('tier-4')) anims.push('pulseLegendary 1s alternate infinite');
+      existing.style.animation = anims.join(', ');
     }
     return;
   }
@@ -781,6 +821,10 @@ function addSupporter(side, username, profilePic) {
 
   const avatar = document.createElement('div');
   avatar.className = 'sup-avatar';
+  if (tier >= 4) avatar.classList.add('tier-4');
+  else if (tier === 3) avatar.classList.add('tier-3');
+  else if (tier === 2) avatar.classList.add('tier-2');
+  
   avatar.id = 'sup-' + username;
   avatar.style.cssText = `border-color:${color};color:${color};--i:${idx};`;
 
@@ -811,25 +855,102 @@ function addSupporter(side, username, profilePic) {
 
 function spawnFloatingBubble() {} // kept for compat
 
+function shootLaser(username, targetSide, color, tier) {
+  const avatar = document.getElementById('sup-' + username);
+  let startX = window.innerWidth / 2;
+  let startY = window.innerHeight;
+
+  if (avatar) {
+    const rect = avatar.getBoundingClientRect();
+    startX = rect.left + rect.width / 2;
+    startY = rect.top + rect.height / 2;
+    // Pequeno pulo do atacante
+    avatar.style.transform = `scale(${1.2 + tier*0.1}) translateY(-20px)`;
+    setTimeout(() => avatar.style.transform = '', 200);
+  } else {
+    // Se não tiver avatar na tela, vem de baixo
+    startX = targetSide === 'b' ? window.innerWidth * 0.2 : window.innerWidth * 0.8;
+  }
+
+  const targetEl = document.getElementById(targetSide === 'b' ? 'fighter-b-img' : 'fighter-a-img');
+  const trect = targetEl.getBoundingClientRect();
+  const endX = trect.left + trect.width / 2;
+  const endY = trect.top + trect.height / 2;
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const angle = Math.atan2(dy, dx);
+
+  const proj = document.createElement('div');
+  proj.className = 'projectile';
+  
+  // Espessura baseada no tier
+  const height = 4 + tier * 6;
+  proj.style.cssText = `
+    left: ${startX}px;
+    top: ${startY - height/2}px;
+    width: 0px;
+    height: ${height}px;
+    background: ${color};
+    color: ${color};
+    transform: rotate(${angle}rad);
+  `;
+  document.body.appendChild(proj);
+
+  // Animação CSS do projétil
+  setTimeout(() => {
+    proj.style.width = `${dist}px`;
+  }, 10);
+
+  setTimeout(() => {
+    proj.style.left = `${endX}px`;
+    proj.style.top = `${endY}px`;
+    proj.style.width = '0px';
+  }, 200); // 200ms viagem
+
+  setTimeout(() => proj.remove(), 600);
+}
+
 // ── DANO ─────────────────────────────────────────────────
 function dealDamage(side, username, coins, reason, profilePic) {
   if (!state.inRound) return;
-  const dmg = Math.max(5, Math.round(Math.sqrt(coins) * 15));
+  
+  // Calcula o tier baseado nas moedas
+  let tier = 1;
+  if (coins >= 3000) tier = 4;
+  else if (coins >= 500) tier = 3;
+  else if (coins >= 50) tier = 2;
 
-  if (side === 'a') {
-    state.dmgA += dmg;
-    addBurst(window.innerWidth*0.75, window.innerHeight*0.5, '#ff0050', 20 + Math.min(coins,50));
-    shakeTarget('a');
-  } else {
-    state.dmgB += dmg;
-    addBurst(window.innerWidth*0.25, window.innerHeight*0.5, '#00f5ff', 20 + Math.min(coins,50));
-    shakeTarget('b');
-  }
+  // Dano escala melhor: base 5, mas presentes caros multiplicam drasticamente
+  // 1 moeda = ~15 dano. 3000 moedas = ~10000 dano
+  let dmg = Math.max(5, Math.round(Math.pow(coins, 0.7) * 20));
+  if (coins <= 1) dmg = 1; // comentários valem 1
 
-  updateHP();
-  showAttack(side, username, dmg, reason);
-  showDmgPop(side, dmg);
-  addSupporter(side, username, profilePic);
+  addSupporter(side, username, profilePic, tier);
+
+  const targetSide = side === 'a' ? 'b' : 'a';
+  const color = side === 'a' ? '#00f5ff' : '#ff0050';
+  const targetColor = side === 'a' ? '#ff0050' : '#00f5ff';
+
+  // Dispara o laser do usuário até o alvo
+  shootLaser(username, targetSide, color, tier);
+
+  setTimeout(() => {
+    if (side === 'a') {
+      state.dmgA += dmg;
+      addBurst(window.innerWidth*0.75, window.innerHeight*0.5, targetColor, 20 * tier);
+      shakeTarget('a');
+    } else {
+      state.dmgB += dmg;
+      addBurst(window.innerWidth*0.25, window.innerHeight*0.5, targetColor, 20 * tier);
+      shakeTarget('b');
+    }
+
+    updateHP();
+    showAttack(side, username, dmg, reason);
+    showDmgPop(side, dmg);
+  }, 200); // Sincronizado com a chegada do laser
 }
 
 // ── VITÓRIA / PRÓXIMO ROUND ───────────────────────────────
