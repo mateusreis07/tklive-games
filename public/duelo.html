@@ -75,14 +75,14 @@
 
   #score-center {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 11px;
     color: #555;
     text-align: center;
     letter-spacing: 1px;
     text-transform: uppercase;
     flex: 0.5;
   }
-  #round-label { color: #aaa; font-size: 13px; display: block; }
+  #round-label { color: #aaa; font-size: 13px; display: block; margin-bottom: 2px; }
+  #round-timer { font-size: 20px; color: #fff; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 6px; display: inline-block; min-width: 70px; }
 
   /* ── ARENA CENTRAL ───────────────────────── */
   #arena {
@@ -455,7 +455,7 @@
 
   <div id="score-center">
     <span id="round-label">ROUND 1</span>
-    ⚔️ DUELO
+    <div id="round-timer">03:00</div>
   </div>
 
   <div class="score-side score-b">
@@ -537,6 +537,7 @@ const USER  = params.get('user') || 'demo';
 const GAME  = params.get('game') || 'duelo';
 const NAME_A = decodeURIComponent(params.get('a') || 'Time A');
 const NAME_B = decodeURIComponent(params.get('b') || 'Time B');
+const ROUND_DURATION = parseInt(params.get('duration') || '180', 10); // segundos
 const EMOJI_A = decodeURIComponent(params.get('ea') || '🔵');
 const EMOJI_B = decodeURIComponent(params.get('eb') || '🔴');
 
@@ -566,15 +567,16 @@ if (imgB) {
 }
 
 // ── ESTADO ──────────────────────────────────────────────
-const MAX_HP = 1000;
 const state = {
-  hpA: MAX_HP,
-  hpB: MAX_HP,
+  dmgA: 0,
+  dmgB: 0,
   scoreA: 0,
   scoreB: 0,
   round: 1,
+  timeLeft: ROUND_DURATION,
+  timerInterval: null,
   userSide: {},    // username -> 'a' | 'b'
-  inRound: true,
+  inRound: false,
   supporters: { a: [], b: [] },
 };
 
@@ -646,16 +648,46 @@ function drawParticles() {
 drawParticles();
 
 // ── UI HELPERS ───────────────────────────────────────────
+function formatTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function updateTimerDisplay() {
+  document.getElementById('round-timer').textContent = formatTime(state.timeLeft);
+}
+
+function startTimer() {
+  state.inRound = true;
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    if (!state.inRound) return;
+    state.timeLeft--;
+    updateTimerDisplay();
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timerInterval);
+      state.timeLeft = 0;
+      updateTimerDisplay();
+      endRoundByTime();
+    }
+  }, 1000);
+}
+
 function updateHP() {
-  const pA = Math.max(0, state.hpA / MAX_HP);
-  const pB = Math.max(0, state.hpB / MAX_HP);
-  const totalVisible = pA + pB || 0.001;
-  const wA = (pA / totalVisible) * 100;
-  const wB = (pB / totalVisible) * 100;
+  const totalDmg = state.dmgA + state.dmgB;
+  let pA = 0.5, pB = 0.5;
+  if (totalDmg > 0) {
+    pA = state.dmgA / totalDmg;
+    pB = state.dmgB / totalDmg;
+  }
+  
+  const wA = pA * 100;
+  const wB = pB * 100;
   document.getElementById('hp-a-fill').style.width = wA + '%';
   document.getElementById('hp-b-fill').style.width = wB + '%';
-  document.getElementById('hp-a-pct').textContent  = Math.ceil(pA*100) + '%';
-  document.getElementById('hp-b-pct').textContent  = Math.ceil(pB*100) + '%';
+  document.getElementById('hp-a-pct').textContent  = Math.round(wA) + '%';
+  document.getElementById('hp-b-pct').textContent  = Math.round(wB) + '%';
 }
 
 function updateScore() {
@@ -719,11 +751,11 @@ function dealDamage(side, username, coins, reason) {
   const dmg = Math.max(5, Math.round(Math.sqrt(coins) * 15));
 
   if (side === 'a') {
-    state.hpB = Math.max(0, state.hpB - dmg);
+    state.dmgA += dmg;
     addBurst(window.innerWidth*0.75, window.innerHeight*0.5, '#ff0050', 20 + Math.min(coins,50));
     shakeTarget('a');
   } else {
-    state.hpA = Math.max(0, state.hpA - dmg);
+    state.dmgB += dmg;
     addBurst(window.innerWidth*0.25, window.innerHeight*0.5, '#00f5ff', 20 + Math.min(coins,50));
     shakeTarget('b');
   }
@@ -732,13 +764,19 @@ function dealDamage(side, username, coins, reason) {
   showAttack(side, username, dmg, reason);
   showDmgPop(side, dmg);
   addSupporter(side, username);
-
-  if (state.hpA <= 0 || state.hpB <= 0) {
-    triggerVictory(state.hpA <= 0 ? 'b' : 'a');
-  }
 }
 
 // ── VITÓRIA / PRÓXIMO ROUND ───────────────────────────────
+function endRoundByTime() {
+  state.inRound = false;
+  
+  let winner = 'empate';
+  if (state.dmgA > state.dmgB) winner = 'a';
+  else if (state.dmgB > state.dmgA) winner = 'b';
+  else winner = Math.random() < 0.5 ? 'a' : 'b'; // desempate aleatório
+
+  triggerVictory(winner);
+}
 function triggerVictory(winner) {
   state.inRound = false;
 
@@ -778,16 +816,18 @@ function showWin(emoji, name, color) {
 }
 
 function nextRound() {
-  state.hpA = MAX_HP;
-  state.hpB = MAX_HP;
+  state.dmgA = 0;
+  state.dmgB = 0;
   state.round++;
-  state.inRound = true;
+  state.timeLeft = ROUND_DURATION;
   state.supporters = { a: [], b: [] };
   document.getElementById('supporters-a').innerHTML = '';
   document.getElementById('supporters-b').innerHTML = '';
   document.getElementById('win-overlay').classList.remove('show');
   updateHP();
   updateScore();
+  updateTimerDisplay();
+  startTimer();
 }
 
 // ── CHAT ─────────────────────────────────────────────────
@@ -927,8 +967,10 @@ function connectWS() {
 }
 
 // ── INICIAR ───────────────────────────────────────────────
+updateTimerDisplay();
 updateHP();
 updateScore();
+startTimer();
 
 if (USER === 'demo') {
   startDemo();
