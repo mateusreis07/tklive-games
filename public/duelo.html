@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>⚔️ Duelo — TKLive Games</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
@@ -27,7 +28,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 30px;
+    padding: 0 10px;
     background: rgba(0,0,0,0.85);
     border-bottom: 2px solid rgba(255,255,255,0.08);
     backdrop-filter: blur(12px);
@@ -36,33 +37,36 @@
   .score-side {
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-width: 200px;
+    gap: 8px;
+    flex: 1;
   }
   .score-avatar {
-    width: 44px; height: 44px;
+    width: 40px; height: 40px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid;
-    font-size: 26px;
+    font-size: 20px;
     display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,0.05);
     overflow: hidden;
+    flex-shrink: 0;
   }
+  .score-avatar img { width: 100%; height: 100%; object-fit: cover; }
   #score-a-avatar { border-color: #00f5ff; }
   #score-b-avatar { border-color: #ff0050; }
 
   .score-name {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 18px;
+    font-size: 14px;
     text-transform: uppercase;
+    white-space: nowrap;
   }
   #score-a-name { color: #00f5ff; }
   #score-b-name { color: #ff0050; text-align: right; }
 
   .score-pts {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 36px;
+    font-size: 26px;
     line-height: 1;
   }
   #score-a-pts { color: #00f5ff; }
@@ -71,13 +75,14 @@
 
   #score-center {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 13px;
+    font-size: 11px;
     color: #555;
     text-align: center;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
+    flex: 0.5;
   }
-  #round-label { color: #aaa; font-size: 15px; display: block; }
+  #round-label { color: #aaa; font-size: 13px; display: block; }
 
   /* ── ARENA CENTRAL ───────────────────────── */
   #arena {
@@ -104,47 +109,52 @@
 
   .side-label {
     position: absolute;
-    top: 20px;
+    top: 15px;
     font-family: 'Black Ops One', sans-serif;
-    font-size: 13px;
-    letter-spacing: 3px;
+    font-size: 11px;
+    letter-spacing: 1px;
     opacity: 0.4;
     text-transform: uppercase;
+    text-align: center;
+    width: 100%;
   }
-  #side-a .side-label { color: #00f5ff; left: 24px; }
-  #side-b .side-label { color: #ff0050; right: 24px; }
+  #side-a .side-label { color: #00f5ff; }
+  #side-b .side-label { color: #ff0050; }
 
   /* Fighter */
   .fighter-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     z-index: 2;
   }
   .fighter-emoji {
-    font-size: 90px;
+    font-size: 60px;
     line-height: 1;
     filter: drop-shadow(0 0 20px currentColor);
     transition: transform 0.1s;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 130px;
-    height: 130px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     background: rgba(255,255,255,0.04);
     border: 3px solid;
     position: relative;
+    overflow: hidden;
   }
+  .fighter-emoji img { width: 100%; height: 100%; object-fit: cover; }
   #fighter-a-img { border-color: rgba(0,245,255,0.5); }
   #fighter-b-img { border-color: rgba(255,0,80,0.5); }
 
   .fighter-name {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 22px;
+    font-size: 18px;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
+    text-align: center;
   }
   #fighter-a-name { color: #00f5ff; }
   #fighter-b-name { color: #ff0050; }
@@ -155,15 +165,15 @@
     bottom: 20px;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    max-width: 90%;
+    gap: 4px;
+    max-width: 95%;
     justify-content: center;
   }
   .supporter-chip {
     background: rgba(255,255,255,0.06);
     border-radius: 20px;
-    padding: 4px 10px;
-    font-size: 12px;
+    padding: 3px 8px;
+    font-size: 10px;
     color: #bbb;
     font-weight: 700;
     animation: popIn 0.3s ease;
@@ -191,14 +201,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     z-index: 20;
     pointer-events: none;
+    width: 90vw;
+    max-width: 420px;
   }
 
   .hp-bar-container {
-    width: 420px;
-    height: 36px;
+    width: 100%;
+    height: 30px;
     background: rgba(0,0,0,0.7);
     border-radius: 20px;
     border: 2px solid rgba(255,255,255,0.12);
@@ -211,17 +223,17 @@
     height: 100%;
     background: linear-gradient(90deg, #00b8cc, #00f5ff);
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 18px 0 0 18px;
+    border-radius: 15px 0 0 15px;
   }
   #hp-b-fill {
     height: 100%;
     background: linear-gradient(90deg, #ff0050, #ff0099);
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 0 18px 18px 0;
+    border-radius: 0 15px 15px 0;
   }
   .hp-pct {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     text-align: center;
     opacity: 0.85;
   }
@@ -229,7 +241,7 @@
   #hp-b-pct { color: #ff0050; }
   .hp-vs {
     font-family: 'Black Ops One', sans-serif;
-    font-size: 22px;
+    font-size: 18px;
     color: #fff;
     text-shadow: 0 0 15px rgba(255,255,255,0.5);
   }
@@ -237,7 +249,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 420px;
+    width: 100%;
     justify-content: space-between;
   }
 
@@ -257,7 +269,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -60%);
-    font-size: 40px;
+    font-size: 32px;
     filter: drop-shadow(0 0 12px rgba(255,255,255,0.6));
     animation: swordPulse 2s ease-in-out infinite;
   }
@@ -275,7 +287,8 @@
     display: flex;
     flex-direction: column-reverse;
     gap: 6px;
-    width: 500px;
+    width: 95vw;
+    max-width: 500px;
     max-height: 180px;
     overflow: hidden;
     z-index: 30;
@@ -527,15 +540,30 @@ const NAME_B = decodeURIComponent(params.get('b') || 'Time B');
 const EMOJI_A = decodeURIComponent(params.get('ea') || '🔵');
 const EMOJI_B = decodeURIComponent(params.get('eb') || '🔴');
 
-// Injeta nomes e emojis
+// Injeta nomes e emojis (se houver imagem salva, usa ela; senão usa emoji)
 document.getElementById('fighter-a-name').textContent = NAME_A.toUpperCase();
 document.getElementById('fighter-b-name').textContent = NAME_B.toUpperCase();
-document.getElementById('fighter-a-img').textContent  = EMOJI_A;
-document.getElementById('fighter-b-img').textContent  = EMOJI_B;
 document.getElementById('score-a-name').textContent   = NAME_A.toUpperCase();
 document.getElementById('score-b-name').textContent   = NAME_B.toUpperCase();
-document.getElementById('score-a-avatar').textContent = EMOJI_A;
-document.getElementById('score-b-avatar').textContent = EMOJI_B;
+
+const imgA = localStorage.getItem('duelo_img_a');
+const imgB = localStorage.getItem('duelo_img_b');
+
+if (imgA) {
+  document.getElementById('fighter-a-img').innerHTML = `<img src="${imgA}">`;
+  document.getElementById('score-a-avatar').innerHTML = `<img src="${imgA}">`;
+} else {
+  document.getElementById('fighter-a-img').textContent = EMOJI_A;
+  document.getElementById('score-a-avatar').textContent = EMOJI_A;
+}
+
+if (imgB) {
+  document.getElementById('fighter-b-img').innerHTML = `<img src="${imgB}">`;
+  document.getElementById('score-b-avatar').innerHTML = `<img src="${imgB}">`;
+} else {
+  document.getElementById('fighter-b-img').textContent = EMOJI_B;
+  document.getElementById('score-b-avatar').textContent = EMOJI_B;
+}
 
 // ── ESTADO ──────────────────────────────────────────────
 const MAX_HP = 1000;
