@@ -130,15 +130,15 @@
     z-index: 2;
   }
   .fighter-emoji {
-    font-size: 60px;
+    font-size: 80px;
     line-height: 1;
     filter: drop-shadow(0 0 20px currentColor);
     transition: transform 0.1s;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100px;
-    height: 100px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
     background: rgba(255,255,255,0.04);
     border: 3px solid;
@@ -178,6 +178,17 @@
     font-weight: 700;
     animation: popIn 0.3s ease;
   }
+  .supporter-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid;
+    animation: popIn 0.3s ease;
+    background: #222;
+  }
+  #supporters-a .supporter-img { border-color: #00f5ff; }
+  #supporters-b .supporter-img { border-color: #ff0050; }
   @keyframes popIn {
     from { transform: scale(0); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
@@ -522,7 +533,7 @@
 <!-- RODAPÉ -->
 <div id="bottom-bar">
   <div class="chat-instruction">
-    Escolha seu time: comente <span class="a">1️⃣ ou "time1"</span> para apoiar o Time A &nbsp;|&nbsp; <span class="b">2️⃣ ou "time2"</span> para apoiar o Time B. Presentes atacam o adversário!
+    Escolha seu time: comente <span class="a">1️⃣</span> para apoiar o Time A &nbsp;|&nbsp; <span class="b">2️⃣</span> para apoiar o Time B. Presentes atacam o adversário!
   </div>
   <div id="chat-row"></div>
 </div>
@@ -553,6 +564,9 @@ const imgB = localStorage.getItem('duelo_img_b');
 if (imgA) {
   document.getElementById('fighter-a-img').innerHTML = `<img src="${imgA}">`;
   document.getElementById('score-a-avatar').innerHTML = `<img src="${imgA}">`;
+  document.getElementById('side-a').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url(${imgA})`;
+  document.getElementById('side-a').style.backgroundSize = 'cover';
+  document.getElementById('side-a').style.backgroundPosition = 'center';
 } else {
   document.getElementById('fighter-a-img').textContent = EMOJI_A;
   document.getElementById('score-a-avatar').textContent = EMOJI_A;
@@ -561,6 +575,9 @@ if (imgA) {
 if (imgB) {
   document.getElementById('fighter-b-img').innerHTML = `<img src="${imgB}">`;
   document.getElementById('score-b-avatar').innerHTML = `<img src="${imgB}">`;
+  document.getElementById('side-b').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url(${imgB})`;
+  document.getElementById('side-b').style.backgroundSize = 'cover';
+  document.getElementById('side-b').style.backgroundPosition = 'center';
 } else {
   document.getElementById('fighter-b-img').textContent = EMOJI_B;
   document.getElementById('score-b-avatar').textContent = EMOJI_B;
@@ -681,7 +698,7 @@ function updateHP() {
     pA = state.dmgA / totalDmg;
     pB = state.dmgB / totalDmg;
   }
-  
+
   const wA = pA * 100;
   const wB = pB * 100;
   document.getElementById('hp-a-fill').style.width = wA + '%';
@@ -732,21 +749,29 @@ function shakeTarget(side) {
   setTimeout(() => el.style.transform = '', 200);
 }
 
-function addSupporter(side, username) {
+function addSupporter(side, username, profilePic) {
   const list = state.supporters[side];
   if (list.includes(username)) return;
   list.push(username);
   const container = document.getElementById(side === 'a' ? 'supporters-a' : 'supporters-b');
-  const chip = document.createElement('div');
-  chip.className = 'supporter-chip';
-  chip.textContent = '@' + username.substring(0, 10);
-  chip.style.borderColor = side === 'a' ? 'rgba(0,245,255,0.3)' : 'rgba(255,0,80,0.3)';
-  container.prepend(chip);
+  
+  if (profilePic) {
+    const img = document.createElement('img');
+    img.className = 'supporter-img';
+    img.src = profilePic;
+    container.prepend(img);
+  } else {
+    const chip = document.createElement('div');
+    chip.className = 'supporter-chip';
+    chip.textContent = '@' + username.substring(0, 10);
+    chip.style.borderColor = side === 'a' ? 'rgba(0,245,255,0.3)' : 'rgba(255,0,80,0.3)';
+    container.prepend(chip);
+  }
   if (container.children.length > 12) container.lastChild.remove();
 }
 
 // ── DANO ─────────────────────────────────────────────────
-function dealDamage(side, username, coins, reason) {
+function dealDamage(side, username, coins, reason, profilePic) {
   if (!state.inRound) return;
   const dmg = Math.max(5, Math.round(Math.sqrt(coins) * 15));
 
@@ -763,13 +788,13 @@ function dealDamage(side, username, coins, reason) {
   updateHP();
   showAttack(side, username, dmg, reason);
   showDmgPop(side, dmg);
-  addSupporter(side, username);
+  addSupporter(side, username, profilePic);
 }
 
 // ── VITÓRIA / PRÓXIMO ROUND ───────────────────────────────
 function endRoundByTime() {
   state.inRound = false;
-  
+
   let winner = 'empate';
   if (state.dmgA > state.dmgB) winner = 'a';
   else if (state.dmgB > state.dmgA) winner = 'b';
@@ -934,20 +959,32 @@ function connectWS() {
           showAttackInfo(`🎲 @${nick} não escolheu time — foi sorteado para ${sideLabel}! Comente 1 ou 2 para fixar seu time.`);
         }
 
-        dealDamage(side, nick, coins, `🎁 ${data.giftName}`);
+        dealDamage(side, nick, coins, `🎁 ${data.giftName}`, data.profilePic);
       }
 
       // Comentário → detecta escolha de time + dano leve
       if (data.type === 'chat') {
         const username = data.username;
+        const nick     = data.nickname || username;
         const comment  = data.comment || '';
         const detected = detectSideFromComment(comment, username);
         const side     = detected || state.userSide[username];
-        addChat(data.nickname || username, comment, side || null);
 
-        // Comentário de time causa dano leve (1 moeda = dano base)
-        if (detected) {
-          dealDamage(detected, username, 1, '💬 comentário de apoio');
+        if (side) {
+          dealDamage(side, nick, 1, '💬 Comentou', data.profilePic);
+          addChat(nick, comment, side);
+        } else {
+          addChat(nick, comment, null);
+        }
+      }
+
+      // Like
+      if (data.type === 'like') {
+        const username = data.username;
+        const nick     = data.nickname || username;
+        const side     = state.userSide[username];
+        if (side) {
+          dealDamage(side, nick, Math.min(data.likeCount, 10), `❤️ Enviou ${data.likeCount} likes`, data.profilePic);
         }
       }
 
@@ -955,7 +992,7 @@ function connectWS() {
       if (data.type === 'follow') {
         const side = state.userSide[data.username] || (Math.random()<0.5?'a':'b');
         state.userSide[data.username] = side;
-        dealDamage(side, data.username, 5, '❤️ novo seguidor');
+        dealDamage(side, data.username, 5, '❤️ novo seguidor', data.profilePic);
         addChat(data.nickname || data.username, `seguiu! ❤️`, side);
       }
 

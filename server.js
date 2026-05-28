@@ -115,27 +115,30 @@ function startTikTokConnection(user) {
 
   tiktok.on('like', data => {
     broadcast(user, {
-      type:      'like',
-      username:  data.uniqueId,
-      nickname:  data.nickname || data.uniqueId,
-      likeCount: data.likeCount,
+      type:       'like',
+      username:   data.uniqueId,
+      nickname:   data.nickname || data.uniqueId,
+      profilePic: data.profilePictureUrl,
+      likeCount:  data.likeCount,
     });
   });
 
   tiktok.on('chat', data => {
     broadcast(user, {
-      type:     'chat',
-      username: data.uniqueId,
-      nickname: data.nickname || data.uniqueId,
-      comment:  data.comment,
+      type:       'chat',
+      username:   data.uniqueId,
+      nickname:   data.nickname || data.uniqueId,
+      profilePic: data.profilePictureUrl,
+      comment:    data.comment,
     });
   });
 
   tiktok.on('follow', data => {
     broadcast(user, {
-      type:     'follow',
-      username: data.uniqueId,
-      nickname: data.nickname || data.uniqueId,
+      type:       'follow',
+      username:   data.uniqueId,
+      nickname:   data.nickname || data.uniqueId,
+      profilePic: data.profilePictureUrl,
     });
   });
 
