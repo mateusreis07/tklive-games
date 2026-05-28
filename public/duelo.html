@@ -159,39 +159,47 @@
   #fighter-a-name { color: #00f5ff; }
   #fighter-b-name { color: #ff0050; }
 
-  /* Supporters */
-  .supporters {
-    position: absolute;
-    bottom: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-width: 95%;
-    justify-content: center;
+  /* Floating supporter bubbles */
+  @keyframes bobFloat {
+    0%,100% { transform: translateY(0px) scale(1); }
+    25%      { transform: translateY(-6px) scale(1.04); }
+    75%      { transform: translateY(3px) scale(0.97); }
   }
-  .supporter-chip {
-    background: rgba(255,255,255,0.06);
-    border-radius: 20px;
-    padding: 3px 8px;
-    font-size: 10px;
-    color: #bbb;
-    font-weight: 700;
-    animation: popIn 0.3s ease;
-  }
-  .supporter-img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid;
-    animation: popIn 0.3s ease;
-    background: #222;
-  }
-  #supporters-a .supporter-img { border-color: #00f5ff; }
-  #supporters-b .supporter-img { border-color: #ff0050; }
   @keyframes popIn {
     from { transform: scale(0); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* Grade persistente de avatares — Time A (esquerda) e B (direita) */
+  #supporters-a, #supporters-b {
+    position: fixed;
+    bottom: 130px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    max-width: 45vw;
+    z-index: 38;
+    pointer-events: none;
+    align-content: flex-end;
+  }
+  #supporters-a { left: 6px; justify-content: flex-start; }
+  #supporters-b { right: 6px; justify-content: flex-end; }
+
+  .sup-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #111;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px currentColor;
+    animation: popIn 0.3s ease, bobFloat calc(2.5s + var(--i,0) * 0.3s) ease-in-out infinite;
+    animation-delay: 0s, calc(var(--i,0) * 0.4s);
+    flex-shrink: 0;
   }
 
   /* Particles canvas */
@@ -483,20 +491,18 @@
 <div id="arena">
   <div class="side" id="side-a">
     <div class="side-label">Time A — Comente 1</div>
-    <div class="fighter-wrap">
+    <div class="fighters" style="display:flex;flex-direction:column;align-items:center;gap:12px;z-index:2;">
       <div class="fighter-emoji" id="fighter-a-img">🔵</div>
       <div class="fighter-name" id="fighter-a-name">TIME A</div>
     </div>
-    <div class="supporters" id="supporters-a"></div>
   </div>
 
   <div class="side" id="side-b">
     <div class="side-label">Time B — Comente 2</div>
-    <div class="fighter-wrap">
+    <div class="fighters" style="display:flex;flex-direction:column;align-items:center;gap:12px;z-index:2;">
       <div class="fighter-emoji" id="fighter-b-img">🔴</div>
       <div class="fighter-name" id="fighter-b-name">TIME B</div>
     </div>
-    <div class="supporters" id="supporters-b"></div>
   </div>
 </div>
 
@@ -504,6 +510,10 @@
 <div id="divider">
   <div id="divider-sword">⚔️</div>
 </div>
+
+<!-- GRADES DE APOIADORES (persistentes, fora da arena) -->
+<div id="supporters-a"></div>
+<div id="supporters-b"></div>
 
 <!-- HP CENTRAL -->
 <div id="hp-section">
@@ -751,40 +761,55 @@ function shakeTarget(side) {
 
 function addSupporter(side, username, profilePic) {
   const list = state.supporters[side];
-  if (list.includes(username)) return;
-  list.push(username);
-  const container = document.getElementById(side === 'a' ? 'supporters-a' : 'supporters-b');
-  const color = side === 'a' ? '#00f5ff' : '#ff0050';
 
-  const wrap = document.createElement('div');
-  wrap.style.cssText = `
-    width:40px;height:40px;border-radius:50%;border:2px solid ${color};
-    background:#222;overflow:hidden;animation:popIn 0.3s ease;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;position:relative;
-  `;
+  // Se já existe, só re-anima (pipoca de novo)
+  if (list.includes(username)) {
+    const existing = document.getElementById('sup-' + username);
+    if (existing) {
+      existing.style.animation = 'none';
+      void existing.offsetWidth; // reflow
+      const i = list.indexOf(username);
+      existing.style.animation = `popIn 0.3s ease, bobFloat ${2.5 + i * 0.3}s ease-in-out ${i * 0.4}s infinite`;
+    }
+    return;
+  }
+
+  list.push(username);
+  const idx = list.length - 1;
+  const color = side === 'a' ? '#00f5ff' : '#ff0050';
+  const container = document.getElementById('supporters-' + side);
+
+  const avatar = document.createElement('div');
+  avatar.className = 'sup-avatar';
+  avatar.id = 'sup-' + username;
+  avatar.style.cssText = `border-color:${color};color:${color};--i:${idx};`;
 
   if (profilePic) {
     const img = document.createElement('img');
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
     img.src = profilePic;
     img.onerror = () => {
       img.remove();
-      const initial = document.createElement('span');
-      initial.textContent = (username[0] || '?').toUpperCase();
-      initial.style.cssText = `color:${color};font-weight:700;font-size:16px;`;
-      wrap.appendChild(initial);
+      const sp = document.createElement('span');
+      sp.textContent = (username[0] || '?').toUpperCase();
+      sp.style.cssText = `font-weight:700;font-size:16px;color:${color};`;
+      avatar.appendChild(sp);
     };
-    wrap.appendChild(img);
+    avatar.appendChild(img);
   } else {
-    const initial = document.createElement('span');
-    initial.textContent = (username[0] || '?').toUpperCase();
-    initial.style.cssText = `color:${color};font-weight:700;font-size:16px;`;
-    wrap.appendChild(initial);
+    const sp = document.createElement('span');
+    sp.textContent = (username[0] || '?').toUpperCase();
+    sp.style.cssText = `font-weight:700;font-size:16px;color:${color};`;
+    avatar.appendChild(sp);
   }
 
-  container.prepend(wrap);
-  if (container.children.length > 15) container.lastChild.remove();
+  container.appendChild(avatar);
+
+  // Mantém máx 20 por time
+  if (container.children.length > 20) container.firstChild.remove();
 }
+
+function spawnFloatingBubble() {} // kept for compat
 
 // ── DANO ─────────────────────────────────────────────────
 function dealDamage(side, username, coins, reason, profilePic) {
@@ -861,9 +886,7 @@ function nextRound() {
   state.dmgB = 0;
   state.round++;
   state.timeLeft = ROUND_DURATION;
-  state.supporters = { a: [], b: [] };
-  document.getElementById('supporters-a').innerHTML = '';
-  document.getElementById('supporters-b').innerHTML = '';
+  // Mantém os apoiadores entre rounds — apenas zera o dano
   document.getElementById('win-overlay').classList.remove('show');
   updateHP();
   updateScore();
