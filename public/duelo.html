@@ -851,13 +851,22 @@ function connectWS() {
       // Presente → dano automático pelo lado do usuário (ou sorteia se não escolheu)
       if (data.type === 'gift') {
         const username = data.username;
+        const nick     = data.nickname || username;
         const coins    = (data.coins || 1) * (data.repeatCount || 1);
+
+        const alreadyChose = !!state.userSide[username];
         let side = state.userSide[username];
+
         if (!side) {
+          // Sorteia e registra
           side = Math.random() < 0.5 ? 'a' : 'b';
           state.userSide[username] = side;
+          // Avisa no feed que foi sorteado
+          const sideLabel = side === 'a' ? `${EMOJI_A} ${NAME_A}` : `${EMOJI_B} ${NAME_B}`;
+          showAttackInfo(`🎲 @${nick} não escolheu time — foi sorteado para ${sideLabel}! Comente 1 ou 2 para fixar seu time.`);
         }
-        dealDamage(side, username, coins, `🎁 ${data.giftName}`);
+
+        dealDamage(side, nick, coins, `🎁 ${data.giftName}`);
       }
 
       // Comentário → detecta escolha de time + dano leve
